@@ -32,13 +32,13 @@
 	class:icon-only={iconOnly}
 	onclick={share}
 	type="button"
-	aria-label="Podijeli link"
+	aria-label="Share link"
 >
 	{#if copied}
 		<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 			<path d="M4 12l5 5L20 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 		</svg>
-		{#if !iconOnly}Kopirano{/if}
+		{#if !iconOnly}Copied{/if}
 	{:else}
 		<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 			<path fill-rule="evenodd" clip-rule="evenodd" d="M14.25 5.5C14.25 3.70507 15.7051 2.25 17.5 2.25C19.2949 2.25 20.75 3.70507 20.75 5.5C20.75 7.29491 19.2949 8.75 17.5 8.75C15.7051 8.75 14.25 7.29491 14.25 5.5ZM17.5 3.75C16.5335 3.75 15.75 4.53351 15.75 5.5C15.75 6.46649 16.5335 7.25 17.5 7.25C18.4665 7.25 19.25 6.46649 19.25 5.5C19.25 4.53351 18.4665 3.75 17.5 3.75Z" fill="currentColor"/>
@@ -47,7 +47,7 @@
 			<path fill-rule="evenodd" clip-rule="evenodd" d="M8.02386 12.9004C8.23458 12.5438 8.69449 12.4256 9.0511 12.6363L15.7213 16.5778C16.0779 16.7885 16.1962 17.2484 15.9854 17.605C15.7747 17.9616 15.3148 18.0799 14.9582 17.8692L8.288 13.9277C7.9314 13.7169 7.81313 13.257 8.02386 12.9004Z" fill="currentColor"/>
 			<path fill-rule="evenodd" clip-rule="evenodd" d="M17.5 16.75C16.5335 16.75 15.75 17.5335 15.75 18.5C15.75 19.4665 16.5335 20.25 17.5 20.25C18.4665 20.25 19.25 19.4665 19.25 18.5C19.25 17.5335 18.4665 16.75 17.5 16.75ZM14.25 18.5C14.25 16.7051 15.7051 15.25 17.5 15.25C19.2949 15.25 20.75 16.7051 20.75 18.5C20.75 20.2949 19.2949 21.75 17.5 21.75C15.7051 21.75 14.25 20.2949 14.25 18.5Z" fill="currentColor"/>
 		</svg>
-		{#if !iconOnly}Pošalji{/if}
+		{#if !iconOnly}Share{/if}
 	{/if}
 </button>
 

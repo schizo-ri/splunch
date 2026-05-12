@@ -16,7 +16,7 @@ export const load: PageServerLoad = async ({ params, locals: { safeGetSession, s
 		.eq('share_token', params.token)
 		.single()
 
-	if (!item) error(404, 'Stavka nije pronađena.')
+	if (!item) error(404, 'Item not found.')
 
 	const [{ data: photos }, { data: comments }] = await Promise.all([
 		supabase.from('photos').select('*').eq('punch_item_id', item.id).order('created_at'),
@@ -38,8 +38,8 @@ export const actions: Actions = {
 		const note = (data.get('note') as string)?.trim() || null
 		const photo = data.get('photo') as File | null
 
-		if (!workerName) return fail(400, { action: 'resolve', error: 'Upiši svoje ime.' })
-		if (!photo || photo.size === 0) return fail(400, { action: 'resolve', error: 'Fotografija rješenja je obavezna.' })
+		if (!workerName) return fail(400, { action: 'resolve', error: 'Enter your name.' })
+		if (!photo || photo.size === 0) return fail(400, { action: 'resolve', error: 'Solution photo is required.' })
 
 		const { data: item } = await supabaseAdmin
 			.from('punch_items')
@@ -47,9 +47,9 @@ export const actions: Actions = {
 			.eq('share_token', params.token)
 			.single()
 
-		if (!item) return fail(404, { action: 'resolve', error: 'Stavka nije pronađena.' })
+		if (!item) return fail(404, { action: 'resolve', error: 'Item not found.' })
 		if (!['open', 'reopened'].includes(item.status)) {
-			return fail(400, { action: 'resolve', error: 'Stavka nije otvorena za popravak.' })
+			return fail(400, { action: 'resolve', error: 'Item is not open for repair.' })
 		}
 
 		const ext = photo.name.split('.').pop()?.toLowerCase() ?? 'jpg'
@@ -60,7 +60,7 @@ export const actions: Actions = {
 			.from('punch-photos')
 			.upload(storagePath, buffer, { contentType: photo.type, upsert: false })
 
-		if (uploadError) return fail(500, { action: 'resolve', error: 'Greška pri uploadu fotografije.' })
+		if (uploadError) return fail(500, { action: 'resolve', error: 'Error uploading photo.' })
 
 		await Promise.all([
 			supabaseAdmin.from('photos').insert({
@@ -87,7 +87,7 @@ export const actions: Actions = {
 
 	close: async ({ request, params, locals: { safeGetSession } }) => {
 		const { user } = await safeGetSession()
-		if (!user) return fail(401, { action: 'close', error: 'Nisi prijavljen.' })
+		if (!user) return fail(401, { action: 'close', error: 'Not logged in.' })
 
 		const data = await request.formData()
 		const note = (data.get('note') as string)?.trim() || null
@@ -99,7 +99,7 @@ export const actions: Actions = {
 			.single()
 
 		if (!item || item.created_by !== user.id) {
-			return fail(403, { action: 'close', error: 'Nemate pravo zatvoriti ovu stavku.' })
+			return fail(403, { action: 'close', error: 'You do not have permission to close this item.' })
 		}
 
 		await Promise.all([
@@ -108,7 +108,7 @@ export const actions: Actions = {
 				? [supabaseAdmin.from('comments').insert({
 						punch_item_id: item.id,
 						body: note,
-						author_name: user.email ?? 'voditelj',
+						author_name: user.email ?? 'foreman',
 						author_user_id: user.id
 					})]
 				: [])
@@ -119,12 +119,12 @@ export const actions: Actions = {
 
 	reopen: async ({ request, params, locals: { safeGetSession } }) => {
 		const { user } = await safeGetSession()
-		if (!user) return fail(401, { action: 'reopen', error: 'Nisi prijavljen.' })
+		if (!user) return fail(401, { action: 'reopen', error: 'Not logged in.' })
 
 		const data = await request.formData()
 		const note = (data.get('note') as string)?.trim()
 
-		if (!note) return fail(400, { action: 'reopen', error: 'Navedi razlog vraćanja na popravak.' })
+		if (!note) return fail(400, { action: 'reopen', error: 'Please provide a reason for returning the item.' })
 
 		const { data: item } = await supabaseAdmin
 			.from('punch_items')
@@ -133,7 +133,7 @@ export const actions: Actions = {
 			.single()
 
 		if (!item || item.created_by !== user.id) {
-			return fail(403, { action: 'reopen', error: 'Nemate pravo vratiti ovu stavku.' })
+			return fail(403, { action: 'reopen', error: 'You do not have permission to return this item.' })
 		}
 
 		await Promise.all([
@@ -141,7 +141,7 @@ export const actions: Actions = {
 			supabaseAdmin.from('comments').insert({
 				punch_item_id: item.id,
 				body: note,
-				author_name: user.email ?? 'voditelj',
+				author_name: user.email ?? 'foreman',
 				author_user_id: user.id
 			})
 		])

@@ -13,7 +13,7 @@ export const load: PageServerLoad = async ({ params, locals: { safeGetSession, s
 		.eq('owner_id', user.id)
 		.single()
 
-	if (!project) error(404, 'Projekt nije pronađen.')
+	if (!project) error(404, 'Project not found.')
 
 	const { data: items } = await supabase
 		.from('punch_items')
@@ -37,12 +37,12 @@ export const actions: Actions = {
 		const annotationsRaw = data.get('annotations') as string | null
 		const annotations = annotationsRaw ? JSON.parse(annotationsRaw) : []
 
-		if (!title) return fail(400, { error: 'Naslov je obavezan.' })
-		if (!photo || photo.size === 0) return fail(400, { error: 'Fotografija problema je obavezna.' })
+		if (!title) return fail(400, { error: 'Title is required.' })
+		if (!photo || photo.size === 0) return fail(400, { error: 'Problem photo is required.' })
 
 		const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
 		if (!allowedTypes.includes(photo.type) && !photo.name.match(/\.(jpe?g|png|webp|heic|heif)$/i)) {
-			return fail(400, { error: 'Podržani formati: JPG, PNG, WebP, HEIC.' })
+			return fail(400, { error: 'Supported formats: JPG, PNG, WebP, HEIC.' })
 		}
 
 		// 1. Create punch item
@@ -52,7 +52,7 @@ export const actions: Actions = {
 			.select('id, share_token')
 			.single()
 
-		if (itemError || !item) return fail(500, { error: 'Greška pri kreiranju stavke.' })
+		if (itemError || !item) return fail(500, { error: 'Error creating item.' })
 
 		// 2. Upload photo
 		const ext = photo.name.split('.').pop()?.toLowerCase() ?? 'jpg'
@@ -65,7 +65,7 @@ export const actions: Actions = {
 
 		if (uploadError) {
 			await supabaseAdmin.from('punch_items').delete().eq('id', item.id)
-			return fail(500, { error: 'Greška pri uploadu fotografije.' })
+			return fail(500, { error: 'Error uploading photo.' })
 		}
 
 		// 3. Save photo record
@@ -74,7 +74,7 @@ export const actions: Actions = {
 			type: 'problem',
 			storage_path: storagePath,
 			annotations,
-			created_by_name: user.email ?? 'voditelj'
+			created_by_name: user.email ?? 'foreman'
 		})
 
 		return { success: true }

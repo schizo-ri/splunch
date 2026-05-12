@@ -1,11 +1,11 @@
 import type { PunchStatus } from './types/database'
 
 export const STATUS_LABEL: Record<PunchStatus, string> = {
-	open:     'Otvoreno',
-	resolved: 'Riješeno',
-	reviewed: 'Pregledano',
-	closed:   'Zatvoreno',
-	reopened: 'Ponovno otvoreno'
+	open:     'Open',
+	resolved: 'Resolved',
+	reviewed: 'Reviewed',
+	closed:   'Closed',
+	reopened: 'Reopened'
 }
 
 export const STATUS_BADGE_CLASS: Record<PunchStatus, string> = {

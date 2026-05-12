@@ -13,13 +13,13 @@ export const actions: Actions = {
 		const password = data.get('password') as string
 
 		if (!email || !password) {
-			return fail(400, { error: 'Upiši email i lozinku.' })
+			return fail(400, { error: 'Enter email and password.' })
 		}
 
 		const { error } = await supabase.auth.signInWithPassword({ email, password })
 
 		if (error) {
-			return fail(400, { error: 'Pogrešan email ili lozinka.' })
+			return fail(400, { error: 'Incorrect email or password.' })
 		}
 
 		redirect(303, '/dashboard')

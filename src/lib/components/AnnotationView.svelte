@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Annotation, Json } from '$lib/types/database';
 
-	let { src, annotations, alt = 'Fotografija' }: {
+	let { src, annotations, alt = 'Photo' }: {
 		src: string;
 		annotations: Json | null;
 		alt?: string;

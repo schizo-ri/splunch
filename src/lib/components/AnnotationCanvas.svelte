@@ -172,7 +172,7 @@
 		<img
 			bind:this={imgEl}
 			{src}
-			alt="Fotografija za anotaciju"
+			alt="Photo for annotation"
 			class="img"
 			onload={syncCanvasSize}
 		/>
@@ -196,7 +196,7 @@
 				<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
 					<circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="2"/>
 				</svg>
-				Krug
+				Circle
 			</button>
 			<button
 				type="button"
@@ -207,15 +207,15 @@
 				<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
 					<path d="M3 15L15 3M15 3H8M15 3V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 				</svg>
-				Strelica
+				Arrow
 			</button>
 		</div>
 		<div class="actions">
 			<button type="button" class="action-btn" onclick={undo} disabled={annotations.length === 0}>
-				Poništi
+				Undo
 			</button>
 			<button type="button" class="action-btn" onclick={clear} disabled={annotations.length === 0}>
-				Očisti sve
+				Clear all
 			</button>
 		</div>
 	</div>

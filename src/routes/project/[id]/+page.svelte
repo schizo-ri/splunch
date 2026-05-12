@@ -61,7 +61,7 @@
 	<header class="topbar safe-top">
 		<div class="topbar-inner">
 			<a class="back-btn" href="/dashboard">
-				<span aria-hidden="true">‹</span> Projekti
+				<span aria-hidden="true">‹</span> Projects
 			</a>
 			<span class="topbar-title">{data.project.name}</span>
 			<div style="width: 5rem"></div>
@@ -74,12 +74,12 @@
 		{/if}
 
 		<div class="section-header">
-			<h1 class="section-title">Problemi</h1>
+			<h1 class="section-title">Issues</h1>
 			<button
 				class="btn btn-primary btn-sm"
 				onclick={() => (showForm = !showForm)}
 			>
-				{showForm ? 'Odustani' : '+ Novi problem'}
+				{showForm ? 'Cancel' : '+ New issue'}
 			</button>
 		</div>
 
@@ -97,20 +97,20 @@
 					};
 				}}
 			>
-				<h2 class="form-title">Novi problem</h2>
+				<h2 class="form-title">New issue</h2>
 
 				{#if form?.error}
 					<div class="error-banner" role="alert">{form.error}</div>
 				{/if}
 
 				<div class="field">
-					<label class="label" for="title">Naslov <span aria-hidden="true">*</span></label>
+					<label class="label" for="title">Title <span aria-hidden="true">*</span></label>
 					<input
 						class="input"
 						type="text"
 						id="title"
 						name="title"
-						placeholder="npr. Pukotina u žbuci — soba 3"
+						placeholder="e.g. Crack in plaster — room 3"
 						autocomplete="off"
 						required
 						disabled={creating}
@@ -118,32 +118,32 @@
 				</div>
 
 				<div class="field">
-					<label class="label" for="description">Opis</label>
+					<label class="label" for="description">Description</label>
 					<textarea
 						class="textarea"
 						id="description"
 						name="description"
-						placeholder="Dodatne napomene…"
+						placeholder="Additional notes…"
 						rows="3"
 						disabled={creating}
 					></textarea>
 				</div>
 
 				<div class="field">
-					<label class="label" for="assigned_to">Dodijeljeno radniku</label>
+					<label class="label" for="assigned_to">Assigned to</label>
 					<input
 						class="input"
 						type="text"
 						id="assigned_to"
 						name="assigned_to"
-						placeholder="Ime, nadimak ili email"
+						placeholder="Name, nickname or email"
 						autocomplete="off"
 						disabled={creating}
 					/>
 				</div>
 
 				<div class="field">
-					<span class="label">Fotografija problema <span aria-hidden="true">*</span></span>
+					<span class="label">Problem photo <span aria-hidden="true">*</span></span>
 
 					<!-- Input stays in DOM so the file is always included in the form submission -->
 					<input
@@ -168,18 +168,18 @@
 							type="button"
 							class="photo-clear-text"
 							onclick={clearPhoto}
-						>Ukloni fotografiju</button>
+						>Remove photo</button>
 					{:else}
 						<label class="photo-picker" for="photo">
 							<span class="photo-picker-icon" aria-hidden="true">📷</span>
-							<span>Fotografiraj ili odaberi sliku</span>
+							<span>Take a photo or choose an image</span>
 						</label>
 					{/if}
 				</div>
 
 				<button class="btn btn-primary btn-full" type="submit" disabled={creating}>
 					{#if creating}<span class="spinner"></span>{/if}
-					Dodaj problem
+					Add issue
 				</button>
 			</form>
 		{/if}
@@ -191,7 +191,7 @@
 					class:active={activeFilter === 'all'}
 					onclick={() => (activeFilter = 'all')}
 				>
-					Sve <span class="filter-count">{data.items.length}</span>
+					All <span class="filter-count">{data.items.length}</span>
 				</button>
 				{#each ALL_STATUSES as status}
 					{#if counts()[status]}
@@ -210,12 +210,12 @@
 
 		{#if data.items.length === 0}
 			<div class="empty">
-				<p>Nema prijavljenih problema.</p>
-				<p class="text-muted text-sm">Dodaj prvi problem gore.</p>
+				<p>No reported issues.</p>
+				<p class="text-muted text-sm">Add your first issue above.</p>
 			</div>
 		{:else if filteredItems().length === 0}
 			<div class="empty">
-				<p>Nema problema s ovim statusom.</p>
+				<p>No issues with this status.</p>
 			</div>
 		{:else}
 			<ul class="item-list">

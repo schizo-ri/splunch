@@ -13,7 +13,7 @@
 </script>
 
 <svelte:head>
-	<title>Projekti — Splunch</title>
+	<title>Projects — Splunch</title>
 </svelte:head>
 
 <div class="layout">
@@ -21,19 +21,19 @@
 		<div class="topbar-inner">
 			<span class="topbar-logo">Splunch</span>
 			<form method="POST" action="/logout">
-				<button class="btn btn-ghost btn-sm" type="submit">Odjava</button>
+				<button class="btn btn-ghost btn-sm" type="submit">Log out</button>
 			</form>
 		</div>
 	</header>
 
 	<main class="main container">
 		<div class="section-header">
-			<h1 class="section-title">Projekti</h1>
+			<h1 class="section-title">Projects</h1>
 			<button
 				class="btn btn-primary btn-sm"
 				onclick={() => (showNewProject = !showNewProject)}
 			>
-				{showNewProject ? 'Odustani' : '+ Novi projekt'}
+				{showNewProject ? 'Cancel' : '+ New project'}
 			</button>
 		</div>
 
@@ -50,20 +50,20 @@
 					};
 				}}
 			>
-				<h2 class="form-title">Novi projekt</h2>
+				<h2 class="form-title">New project</h2>
 
 				{#if form?.error}
 					<div class="error-banner" role="alert">{form.error}</div>
 				{/if}
 
 				<div class="field">
-					<label class="label" for="name">Naziv <span aria-hidden="true">*</span></label>
+					<label class="label" for="name">Name <span aria-hidden="true">*</span></label>
 					<input
 						class="input"
 						type="text"
 						id="name"
 						name="name"
-						placeholder="npr. Stambena zgrada Ilica 12"
+						placeholder="e.g. Main Street Building"
 						autocomplete="off"
 						required
 						disabled={creating}
@@ -71,13 +71,13 @@
 				</div>
 
 				<div class="field">
-					<label class="label" for="address">Adresa</label>
+					<label class="label" for="address">Address</label>
 					<input
 						class="input"
 						type="text"
 						id="address"
 						name="address"
-						placeholder="Ulica i broj"
+						placeholder="Street address"
 						autocomplete="off"
 						disabled={creating}
 					/>
@@ -85,15 +85,15 @@
 
 				<button class="btn btn-primary btn-full" type="submit" disabled={creating}>
 					{#if creating}<span class="spinner"></span>{/if}
-					Kreiraj projekt
+					Create project
 				</button>
 			</form>
 		{/if}
 
 		{#if data.projects.length === 0}
 			<div class="empty">
-				<p>Još nema projekata.</p>
-				<p class="text-muted text-sm">Kreiraj prvi projekt gore.</p>
+				<p>No projects yet.</p>
+				<p class="text-muted text-sm">Create your first project above.</p>
 			</div>
 		{:else}
 			<ul class="project-list">

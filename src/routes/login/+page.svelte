@@ -7,7 +7,7 @@
 </script>
 
 <svelte:head>
-	<title>Prijava — Splunch</title>
+	<title>Sign in — Splunch</title>
 </svelte:head>
 
 <div class="page">
@@ -22,7 +22,7 @@
 				</svg>
 				<span class="logo-name">Splunch</span>
 			</div>
-			<p class="subtitle">Punch list za gradilište</p>
+			<p class="subtitle">Punch list for construction sites</p>
 		</header>
 
 		<main>
@@ -57,7 +57,7 @@
 				</div>
 
 				<div class="field">
-					<label class="label" for="password">Lozinka</label>
+					<label class="label" for="password">Password</label>
 					<input
 						class="input"
 						type="password"
@@ -73,13 +73,13 @@
 					{#if loading}
 						<span class="spinner"></span>
 					{/if}
-					Prijava
+					Sign in
 				</button>
 			</form>
 
 			<p class="register-note">
-				Račun za voditelje kreira administrator.<br />
-				Radnici ne trebaju račun.
+				Foreman accounts are created by the administrator.<br />
+				Workers don't need an account.
 			</p>
 		</main>
 	</div>

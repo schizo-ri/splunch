@@ -56,7 +56,7 @@
 	<header class="topbar safe-top">
 		<div class="topbar-inner">
 			{#if data.isOwner}
-				<a class="back-btn" href="/project/{item.project_id}">‹ Natrag</a>
+				<a class="back-btn" href="/project/{item.project_id}">‹ Back</a>
 			{:else}
 				<span class="topbar-logo">Splunch</span>
 			{/if}
@@ -72,7 +72,7 @@
 				<AnnotationView
 					src={problemPhoto.url}
 					annotations={problemPhoto.annotations}
-					alt="Fotografija problema"
+					alt="Problem photo"
 				/>
 				<div class="photo-overlays">
 					<span class="photo-label">Problem</span>
@@ -81,7 +81,7 @@
 						target="_blank"
 						rel="noopener"
 						class="photo-fullsize"
-						aria-label="Otvori u punoj veličini"
+						aria-label="Open full size"
 					>
 						<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
 							<path d="M8 2h4v4M6 8L12 2M2 6v6h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -99,7 +99,7 @@
 					<p class="item-description text-secondary">{item.description}</p>
 				{/if}
 				{#if item.assigned_to}
-					<p class="item-assigned text-sm text-muted">Dodijeljeno: <strong>{item.assigned_to}</strong></p>
+					<p class="item-assigned text-sm text-muted">Assigned to: <strong>{item.assigned_to}</strong></p>
 				{/if}
 			</div>
 
@@ -111,19 +111,19 @@
 			{#if solutionPhotos.length > 0}
 				<div class="solution-block">
 					<h2 class="section-label">
-						{solutionPhotos.length === 1 ? 'Rješenje' : 'Rješenja'}
+						{solutionPhotos.length === 1 ? 'Solution' : 'Solutions'}
 					</h2>
 					{#each solutionPhotos as photo, i (photo.id)}
 						<div class="solution-item">
 							{#if solutionPhotos.length > 1}
 								<div class="solution-round text-sm text-muted">
-									Pokušaj {i + 1}
+									Attempt {i + 1}
 									{#if photo.created_by_name} — {photo.created_by_name}{/if}
 								</div>
 							{:else if photo.created_by_name}
 								<div class="solution-round text-sm text-muted">{photo.created_by_name}</div>
 							{/if}
-							<img class="solution-img" src={photo.url} alt="Fotografija rješenja {i + 1}" />
+							<img class="solution-img" src={photo.url} alt="Solution photo {i + 1}" />
 						</div>
 					{/each}
 				</div>
@@ -132,7 +132,7 @@
 			<!-- Worker resolve form -->
 			{#if status === 'open' || status === 'reopened'}
 				<div class="action-block card">
-					<h2 class="section-label">Označi kao riješeno</h2>
+					<h2 class="section-label">Mark as resolved</h2>
 
 					<form
 						method="POST"
@@ -149,14 +149,14 @@
 					>
 						<div class="form-fields">
 							<div class="field">
-								<label class="label" for="worker_name">Tvoje ime <span aria-hidden="true">*</span></label>
+								<label class="label" for="worker_name">Your name <span aria-hidden="true">*</span></label>
 								<input
 									class="input"
 									type="text"
 									id="worker_name"
 									name="worker_name"
 									bind:value={workerName}
-									placeholder="Ime ili nadimak"
+									placeholder="Name or nickname"
 									autocomplete="name"
 									required
 									disabled={resolving}
@@ -164,19 +164,19 @@
 							</div>
 
 							<div class="field">
-								<label class="label" for="note">Napomena</label>
+								<label class="label" for="note">Note</label>
 								<textarea
 									class="textarea"
 									id="note"
 									name="note"
-									placeholder="Što si napravio/la?"
+									placeholder="What did you do?"
 									rows="2"
 									disabled={resolving}
 								></textarea>
 							</div>
 
 							<div class="field">
-								<span class="label">Fotografija rješenja <span aria-hidden="true">*</span></span>
+								<span class="label">Solution photo <span aria-hidden="true">*</span></span>
 								<input
 									bind:this={resolveInput}
 									type="file"
@@ -191,12 +191,12 @@
 								{#if resolvePhoto}
 									<div class="photo-preview-wrap">
 										<img class="photo-preview" src={resolvePhoto} alt="Pregled" />
-										<button type="button" class="photo-clear" onclick={clearResolvePhoto} aria-label="Ukloni">✕</button>
+										<button type="button" class="photo-clear" onclick={clearResolvePhoto} aria-label="Remove">✕</button>
 									</div>
 								{:else}
 									<label class="photo-picker" for="resolve-photo">
 										<span class="photo-picker-icon" aria-hidden="true">📷</span>
-										<span>Fotografiraj ili odaberi sliku</span>
+										<span>Take a photo or choose an image</span>
 									</label>
 								{/if}
 							</div>
@@ -204,7 +204,7 @@
 
 						<button class="btn btn-primary btn-full" type="submit" disabled={resolving}>
 							{#if resolving}<span class="spinner"></span>{/if}
-							Pošalji rješenje
+							Submit solution
 						</button>
 					</form>
 				</div>
@@ -213,7 +213,7 @@
 			<!-- Foreman controls (owner only, when resolved) -->
 			{#if data.isOwner && status === 'resolved'}
 				<div class="action-block card">
-					<h2 class="section-label">Pregled rješenja</h2>
+					<h2 class="section-label">Review solution</h2>
 
 					<div class="owner-actions">
 						<form
@@ -228,12 +228,12 @@
 							}}
 						>
 							<div class="field">
-								<label class="label" for="close-note">Komentar (opcionalno)</label>
-								<input class="input" type="text" id="close-note" name="note" placeholder="Sve u redu." disabled={closing} />
+								<label class="label" for="close-note">Comment (optional)</label>
+								<input class="input" type="text" id="close-note" name="note" placeholder="Looks good." disabled={closing} />
 							</div>
 							<button class="btn btn-primary btn-full" type="submit" disabled={closing || reopening}>
 								{#if closing}<span class="spinner"></span>{/if}
-								Zatvori — prihvati rješenje
+								Close — accept solution
 							</button>
 						</form>
 
@@ -243,7 +243,7 @@
 								onclick={() => (showReopenForm = true)}
 								disabled={closing}
 							>
-								Vrati na popravak
+								Return for repair
 							</button>
 						{:else}
 							<form
@@ -258,12 +258,12 @@
 								}}
 							>
 								<div class="field">
-									<label class="label" for="reopen-note">Razlog vraćanja <span aria-hidden="true">*</span></label>
+									<label class="label" for="reopen-note">Reason for return <span aria-hidden="true">*</span></label>
 									<textarea
 										class="textarea"
 										id="reopen-note"
 										name="note"
-										placeholder="Što treba popraviti?"
+										placeholder="What needs to be fixed?"
 										rows="2"
 										required
 										disabled={reopening}
@@ -271,11 +271,11 @@
 								</div>
 								<div class="row-buttons">
 									<button class="btn btn-ghost" type="button" onclick={() => (showReopenForm = false)} disabled={reopening}>
-										Odustani
+										Cancel
 									</button>
 									<button class="btn btn-danger" type="submit" disabled={reopening || closing}>
 										{#if reopening}<span class="spinner"></span>{/if}
-										Vrati na popravak
+										Return for repair
 									</button>
 								</div>
 							</form>
@@ -287,14 +287,14 @@
 			<!-- Comments -->
 			{#if data.comments.length > 0}
 				<div class="comments-block">
-					<h2 class="section-label">Aktivnost</h2>
+					<h2 class="section-label">Activity</h2>
 					<ul class="comment-list">
 						{#each data.comments as comment (comment.id)}
 							<li class="comment">
 								<span class="comment-author font-medium">{comment.author_name}</span>
 								<span class="comment-body text-secondary">{comment.body}</span>
 								<span class="comment-time text-muted text-sm">
-									{new Date(comment.created_at!).toLocaleString('hr')}
+									{new Date(comment.created_at!).toLocaleString('en')}
 								</span>
 							</li>
 						{/each}
