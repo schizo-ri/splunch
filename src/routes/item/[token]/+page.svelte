@@ -84,7 +84,13 @@
 						aria-label="Open full size"
 					>
 						<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-							<path d="M8 2h4v4M6 8L12 2M2 6v6h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+							<path
+								d="M8 2h4v4M6 8L12 2M2 6v6h6"
+								stroke="currentColor"
+								stroke-width="1.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
 						</svg>
 					</a>
 				</div>
@@ -99,7 +105,9 @@
 					<p class="item-description text-secondary">{item.description}</p>
 				{/if}
 				{#if item.assigned_to}
-					<p class="item-assigned text-sm text-muted">Assigned to: <strong>{item.assigned_to}</strong></p>
+					<p class="item-assigned text-sm text-muted">
+						Assigned to: <strong>{item.assigned_to}</strong>
+					</p>
 				{/if}
 			</div>
 
@@ -118,7 +126,8 @@
 							{#if solutionPhotos.length > 1}
 								<div class="solution-round text-sm text-muted">
 									Attempt {i + 1}
-									{#if photo.created_by_name} — {photo.created_by_name}{/if}
+									{#if photo.created_by_name}
+										— {photo.created_by_name}{/if}
 								</div>
 							{:else if photo.created_by_name}
 								<div class="solution-round text-sm text-muted">{photo.created_by_name}</div>
@@ -149,7 +158,9 @@
 					>
 						<div class="form-fields">
 							<div class="field">
-								<label class="label" for="worker_name">Your name <span aria-hidden="true">*</span></label>
+								<label class="label" for="worker_name"
+									>Your name <span aria-hidden="true">*</span></label
+								>
 								<input
 									class="input"
 									type="text"
@@ -191,7 +202,12 @@
 								{#if resolvePhoto}
 									<div class="photo-preview-wrap">
 										<img class="photo-preview" src={resolvePhoto} alt="Pregled" />
-										<button type="button" class="photo-clear" onclick={clearResolvePhoto} aria-label="Remove">✕</button>
+										<button
+											type="button"
+											class="photo-clear"
+											onclick={clearResolvePhoto}
+											aria-label="Remove">✕</button
+										>
 									</div>
 								{:else}
 									<label class="photo-picker" for="resolve-photo">
@@ -229,9 +245,20 @@
 						>
 							<div class="field">
 								<label class="label" for="close-note">Comment (optional)</label>
-								<input class="input" type="text" id="close-note" name="note" placeholder="Looks good." disabled={closing} />
+								<input
+									class="input"
+									type="text"
+									id="close-note"
+									name="note"
+									placeholder="Looks good."
+									disabled={closing}
+								/>
 							</div>
-							<button class="btn btn-primary btn-full" type="submit" disabled={closing || reopening}>
+							<button
+								class="btn btn-primary btn-full"
+								type="submit"
+								disabled={closing || reopening}
+							>
 								{#if closing}<span class="spinner"></span>{/if}
 								Close — accept solution
 							</button>
@@ -258,7 +285,9 @@
 								}}
 							>
 								<div class="field">
-									<label class="label" for="reopen-note">Reason for return <span aria-hidden="true">*</span></label>
+									<label class="label" for="reopen-note"
+										>Reason for return <span aria-hidden="true">*</span></label
+									>
 									<textarea
 										class="textarea"
 										id="reopen-note"
@@ -270,7 +299,12 @@
 									></textarea>
 								</div>
 								<div class="row-buttons">
-									<button class="btn btn-ghost" type="button" onclick={() => (showReopenForm = false)} disabled={reopening}>
+									<button
+										class="btn btn-ghost"
+										type="button"
+										onclick={() => (showReopenForm = false)}
+										disabled={reopening}
+									>
 										Cancel
 									</button>
 									<button class="btn btn-danger" type="submit" disabled={reopening || closing}>
@@ -478,6 +512,10 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-4);
+		margin-bottom: var(--space-4);
+	}
+
+	.field:last-of-type {
 		margin-bottom: var(--space-4);
 	}
 

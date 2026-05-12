@@ -8,22 +8,27 @@ export default defineConfig({
 		sveltekit(),
 		VitePWA({
 			registerType: 'autoUpdate',
+			injectRegister: null,
 			manifest: {
 				name: 'Splunch',
 				short_name: 'Splunch',
 				description: 'Construction site punch list',
+				start_url: '/',
+				scope: '/',
 				theme_color: '#f59e0b',
 				background_color: '#111827',
 				display: 'standalone',
 				orientation: 'portrait',
+				lang: 'en',
 				icons: [
-					{ src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-					{ src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-					{ src: 'pwa-512x512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+					{ src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+					{ src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+					{ src: '/pwa-512x512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
 				]
 			},
 			workbox: {
-				globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}']
+				globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+				navigateFallback: null
 			}
 		})
 	],
