@@ -14,6 +14,24 @@
 	let photoPreview = $state<string | null>(null);
 	let photoInput = $state<HTMLInputElement | null>(null);
 	let annotations = $state<Annotation[]>([]);
+	let activeFilter = $state<PunchStatus | 'all'>('all');
+
+	const ALL_STATUSES: PunchStatus[] = ['open', 'reopened', 'resolved', 'reviewed', 'closed'];
+
+	const counts = $derived(() => {
+		const map: Partial<Record<PunchStatus, number>> = {};
+		for (const item of data.items) {
+			const s = item.status as PunchStatus;
+			map[s] = (map[s] ?? 0) + 1;
+		}
+		return map;
+	});
+
+	const filteredItems = $derived(() =>
+		activeFilter === 'all'
+			? data.items
+			: data.items.filter(i => i.status === activeFilter)
+	);
 
 	$effect(() => {
 		if (form?.success) {
@@ -166,14 +184,42 @@
 			</form>
 		{/if}
 
+		{#if data.items.length > 0}
+			<div class="filter-bar">
+				<button
+					class="filter-btn"
+					class:active={activeFilter === 'all'}
+					onclick={() => (activeFilter = 'all')}
+				>
+					Sve <span class="filter-count">{data.items.length}</span>
+				</button>
+				{#each ALL_STATUSES as status}
+					{#if counts()[status]}
+						<button
+							class="filter-btn filter-btn-{status}"
+							class:active={activeFilter === status}
+							onclick={() => (activeFilter = status)}
+						>
+							{STATUS_LABEL[status]}
+							<span class="filter-count">{counts()[status]}</span>
+						</button>
+					{/if}
+				{/each}
+			</div>
+		{/if}
+
 		{#if data.items.length === 0}
 			<div class="empty">
 				<p>Nema prijavljenih problema.</p>
 				<p class="text-muted text-sm">Dodaj prvi problem gore.</p>
 			</div>
+		{:else if filteredItems().length === 0}
+			<div class="empty">
+				<p>Nema problema s ovim statusom.</p>
+			</div>
 		{:else}
 			<ul class="item-list">
-				{#each data.items as item (item.id)}
+				{#each filteredItems() as item (item.id)}
 					<li class="item-card card">
 						<a class="item-link" href="/item/{item.share_token}">
 							<div class="item-info">
@@ -416,5 +462,47 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	/* Filter bar */
+	.filter-bar {
+		display: flex;
+		gap: var(--space-2);
+		flex-wrap: wrap;
+		margin-bottom: var(--space-4);
+	}
+
+	.filter-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1);
+		padding: var(--space-1) var(--space-3);
+		min-height: 2rem;
+		border: 1px solid var(--color-border-strong);
+		border-radius: var(--radius-full);
+		background: var(--color-surface);
+		color: var(--color-text-secondary);
+		font-size: var(--text-sm);
+		font-weight: var(--weight-medium);
+		cursor: pointer;
+		transition: all var(--transition-fast);
+	}
+
+	.filter-btn.active,
+	.filter-btn:hover {
+		border-color: var(--color-brand);
+		background: var(--color-brand-light, #fef3c7);
+		color: var(--color-text);
+	}
+
+	.filter-btn-open.active    { border-color: var(--color-open);     background: var(--color-open-bg);     color: var(--color-open-fg); }
+	.filter-btn-resolved.active{ border-color: var(--color-resolved);  background: var(--color-resolved-bg); color: var(--color-resolved-fg); }
+	.filter-btn-reviewed.active{ border-color: var(--color-reviewed);  background: var(--color-reviewed-bg); color: var(--color-reviewed-fg); }
+	.filter-btn-closed.active  { border-color: var(--color-closed);    background: var(--color-closed-bg);   color: var(--color-closed-fg); }
+	.filter-btn-reopened.active{ border-color: var(--color-reopened);  background: var(--color-reopened-bg); color: var(--color-reopened-fg); }
+
+	.filter-count {
+		font-weight: var(--weight-semibold);
+		font-variant-numeric: tabular-nums;
 	}
 </style>
