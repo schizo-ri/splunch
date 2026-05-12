@@ -1,0 +1,362 @@
+/* ─── Design tokens ───────────────────────────────────────────── */
+:root {
+	/* Brand */
+	--color-brand:          #f59e0b;
+	--color-brand-dark:     #d97706;
+	--color-brand-light:    #fef3c7;
+	--color-brand-fg:       #1c1917; /* text on brand background */
+
+	/* Status */
+	--color-open:           #dc2626;
+	--color-open-bg:        #fef2f2;
+	--color-open-fg:        #991b1b;
+
+	--color-resolved:       #2563eb;
+	--color-resolved-bg:    #eff6ff;
+	--color-resolved-fg:    #1d4ed8;
+
+	--color-reviewed:       #16a34a;
+	--color-reviewed-bg:    #f0fdf4;
+	--color-reviewed-fg:    #15803d;
+
+	--color-closed:         #6b7280;
+	--color-closed-bg:      #f9fafb;
+	--color-closed-fg:      #374151;
+
+	--color-reopened:       #ea580c;
+	--color-reopened-bg:    #fff7ed;
+	--color-reopened-fg:    #c2410c;
+
+	/* Neutral */
+	--color-bg:             #f8f7f4;
+	--color-surface:        #ffffff;
+	--color-surface-raised: #ffffff;
+	--color-border:         #e5e7eb;
+	--color-border-strong:  #d1d5db;
+
+	--color-text:           #111827;
+	--color-text-secondary: #6b7280;
+	--color-text-muted:     #9ca3af;
+	--color-text-inverse:   #ffffff;
+
+	/* Typography */
+	--font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+	             Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+	--text-xs:   0.75rem;   /* 12px */
+	--text-sm:   0.875rem;  /* 14px */
+	--text-base: 1rem;      /* 16px */
+	--text-lg:   1.125rem;  /* 18px */
+	--text-xl:   1.25rem;   /* 20px */
+	--text-2xl:  1.5rem;    /* 24px */
+	--text-3xl:  1.875rem;  /* 30px */
+
+	--weight-regular:   400;
+	--weight-medium:    500;
+	--weight-semibold:  600;
+	--weight-bold:      700;
+
+	--leading-tight:    1.25;
+	--leading-normal:   1.5;
+	--leading-relaxed:  1.75;
+
+	/* Spacing (4px base) */
+	--space-1:  0.25rem;   /*  4px */
+	--space-2:  0.5rem;    /*  8px */
+	--space-3:  0.75rem;   /* 12px */
+	--space-4:  1rem;      /* 16px */
+	--space-5:  1.25rem;   /* 20px */
+	--space-6:  1.5rem;    /* 24px */
+	--space-8:  2rem;      /* 32px */
+	--space-10: 2.5rem;    /* 40px */
+	--space-12: 3rem;      /* 48px */
+	--space-16: 4rem;      /* 64px */
+
+	/* Touch target minimum */
+	--touch-target: 2.75rem; /* 44px */
+
+	/* Radius */
+	--radius-sm:   0.25rem;   /*  4px */
+	--radius-md:   0.5rem;    /*  8px */
+	--radius-lg:   0.75rem;   /* 12px */
+	--radius-xl:   1rem;      /* 16px */
+	--radius-full: 9999px;
+
+	/* Shadows */
+	--shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+	--shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+	--shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+
+	/* Transitions */
+	--transition-fast:   120ms ease;
+	--transition-normal: 200ms ease;
+}
+
+/* ─── Reset & base ────────────────────────────────────────────── */
+*, *::before, *::after {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+html {
+	font-size: 16px;
+	-webkit-text-size-adjust: 100%;
+	height: 100%;
+}
+
+body {
+	font-family: var(--font-sans);
+	font-size: var(--text-base);
+	font-weight: var(--weight-regular);
+	line-height: var(--leading-normal);
+	color: var(--color-text);
+	background-color: var(--color-bg);
+	min-height: 100%;
+	-webkit-font-smoothing: antialiased;
+}
+
+img, video {
+	max-width: 100%;
+	display: block;
+}
+
+button, input, select, textarea {
+	font: inherit;
+}
+
+a {
+	color: inherit;
+	text-decoration: none;
+}
+
+/* ─── Focus ───────────────────────────────────────────────────── */
+:focus-visible {
+	outline: 2px solid var(--color-brand);
+	outline-offset: 2px;
+}
+
+/* ─── Safe area (iPhone notch / home bar) ─────────────────────── */
+/* Combines base padding with safe-area-inset so layout holds on devices
+   without a notch (inset = 0) too. Use on fixed headers/footers. */
+.safe-top {
+	padding-top: calc(env(safe-area-inset-top) + var(--space-4));
+}
+.safe-bottom {
+	padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-4));
+}
+/* Additive variant — for when the element already has padding set */
+.safe-top-add {
+	padding-top: calc(env(safe-area-inset-top) + var(--existing-padding, 0px));
+}
+.safe-bottom-add {
+	padding-bottom: calc(env(safe-area-inset-bottom) + var(--existing-padding, 0px));
+}
+
+/* ─── Layout helpers ──────────────────────────────────────────── */
+.container {
+	width: 100%;
+	max-width: 640px;
+	margin-inline: auto;
+	padding-inline: var(--space-4);
+}
+
+/* ─── Card ────────────────────────────────────────────────────── */
+.card {
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-sm);
+}
+
+/* ─── Buttons ─────────────────────────────────────────────────── */
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
+	min-height: var(--touch-target);
+	padding: var(--space-2) var(--space-4);
+	border: 1px solid transparent;
+	border-radius: var(--radius-md);
+	font-size: var(--text-base);
+	font-weight: var(--weight-medium);
+	line-height: 1;
+	cursor: pointer;
+	transition: background-color var(--transition-fast),
+	            border-color var(--transition-fast),
+	            color var(--transition-fast);
+	white-space: nowrap;
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.btn-primary {
+	background-color: var(--color-brand);
+	border-color: var(--color-brand);
+	color: var(--color-brand-fg);
+}
+.btn-primary:hover:not(:disabled) {
+	background-color: var(--color-brand-dark);
+	border-color: var(--color-brand-dark);
+}
+
+.btn-secondary {
+	background-color: var(--color-surface);
+	border-color: var(--color-border-strong);
+	color: var(--color-text);
+}
+.btn-secondary:hover:not(:disabled) {
+	background-color: var(--color-bg);
+}
+
+.btn-ghost {
+	background-color: transparent;
+	border-color: transparent;
+	color: var(--color-text-secondary);
+}
+.btn-ghost:hover:not(:disabled) {
+	background-color: var(--color-bg);
+	color: var(--color-text);
+}
+
+.btn-danger {
+	background-color: var(--color-open);
+	border-color: var(--color-open);
+	color: #fff;
+}
+.btn-danger:hover:not(:disabled) {
+	background-color: var(--color-open-fg);
+	border-color: var(--color-open-fg);
+}
+
+.btn-full {
+	width: 100%;
+}
+
+/* ─── Form ────────────────────────────────────────────────────── */
+.label {
+	display: block;
+	font-size: var(--text-sm);
+	font-weight: var(--weight-medium);
+	color: var(--color-text);
+	margin-bottom: var(--space-1);
+}
+
+.input,
+.textarea {
+	display: block;
+	width: 100%;
+	min-height: var(--touch-target);
+	padding: var(--space-2) var(--space-3);
+	background-color: var(--color-surface);
+	border: 1px solid var(--color-border-strong);
+	border-radius: var(--radius-md);
+	font-size: var(--text-base); /* 16px prevents iOS zoom */
+	color: var(--color-text);
+	transition: border-color var(--transition-fast);
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+.textarea {
+	min-height: 6rem;
+	resize: vertical;
+}
+
+.input:focus,
+.textarea:focus {
+	outline: none;
+	border-color: var(--color-brand);
+	box-shadow: 0 0 0 3px rgb(245 158 11 / 0.15);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+	color: var(--color-text-muted);
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+}
+
+.field-hint {
+	font-size: var(--text-sm);
+	color: var(--color-text-secondary);
+}
+
+.field-error {
+	font-size: var(--text-sm);
+	color: var(--color-open);
+}
+
+/* ─── Status badges ───────────────────────────────────────────── */
+.badge {
+	display: inline-flex;
+	align-items: center;
+	padding: var(--space-1) var(--space-2);
+	border-radius: var(--radius-full);
+	font-size: var(--text-xs);
+	font-weight: var(--weight-semibold);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	white-space: nowrap;
+}
+
+.badge-open {
+	background-color: var(--color-open-bg);
+	color: var(--color-open-fg);
+}
+.badge-resolved {
+	background-color: var(--color-resolved-bg);
+	color: var(--color-resolved-fg);
+}
+.badge-reviewed {
+	background-color: var(--color-reviewed-bg);
+	color: var(--color-reviewed-fg);
+}
+.badge-closed {
+	background-color: var(--color-closed-bg);
+	color: var(--color-closed-fg);
+}
+.badge-reopened {
+	background-color: var(--color-reopened-bg);
+	color: var(--color-reopened-fg);
+}
+
+/* ─── Divider ─────────────────────────────────────────────────── */
+.divider {
+	height: 1px;
+	background-color: var(--color-border);
+	margin-block: var(--space-4);
+}
+
+/* ─── Typography helpers ──────────────────────────────────────── */
+.text-secondary { color: var(--color-text-secondary); }
+.text-muted     { color: var(--color-text-muted); }
+.text-sm        { font-size: var(--text-sm); }
+.text-lg        { font-size: var(--text-lg); }
+.text-xl        { font-size: var(--text-xl); }
+.font-medium    { font-weight: var(--weight-medium); }
+.font-semibold  { font-weight: var(--weight-semibold); }
+.font-bold      { font-weight: var(--weight-bold); }
+
+/* ─── Spinner ─────────────────────────────────────────────────── */
+@keyframes spin {
+	to { transform: rotate(360deg); }
+}
+.spinner {
+	width: 1.25rem;
+	height: 1.25rem;
+	border: 2px solid var(--color-border);
+	border-top-color: var(--color-brand);
+	border-radius: var(--radius-full);
+	animation: spin 0.6s linear infinite;
+}
