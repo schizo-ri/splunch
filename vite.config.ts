@@ -9,6 +9,7 @@ export default defineConfig({
 		VitePWA({
 			registerType: 'autoUpdate',
 			injectRegister: null,
+			inlineWorkboxRuntime: true,
 			devOptions: { enabled: true },
 			manifest: {
 				name: 'Splunch',

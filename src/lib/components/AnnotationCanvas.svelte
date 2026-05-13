@@ -172,7 +172,7 @@
 		<img
 			bind:this={imgEl}
 			{src}
-			alt="Photo for annotation"
+			alt=""
 			class="img"
 			onload={syncCanvasSize}
 		/>
