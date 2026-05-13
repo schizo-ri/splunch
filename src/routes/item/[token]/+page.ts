@@ -1,3 +1,5 @@
+export const ssr = false
+
 import { error } from '@sveltejs/kit'
 import { PUBLIC_SUPABASE_URL } from '$env/static/public'
 import type { ProjectRole } from '$lib/types/database'

@@ -32,6 +32,15 @@ export default defineConfig({
 				navigateFallback: null,
 				runtimeCaching: [
 					{
+						urlPattern: ({ request }) => request.mode === 'navigate',
+						handler: 'NetworkFirst',
+						options: {
+							cacheName: 'pages',
+							networkTimeoutSeconds: 3,
+							expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 }
+						}
+					},
+					{
 						urlPattern: ({ url }) =>
 							url.origin.includes('supabase') && url.pathname.startsWith('/rest/v1/'),
 						handler: 'NetworkFirst',
