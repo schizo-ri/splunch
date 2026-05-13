@@ -1,35 +1,6 @@
-import { error, fail } from '@sveltejs/kit'
-import { PUBLIC_SUPABASE_URL } from '$env/static/public'
+import { fail } from '@sveltejs/kit'
 import { supabaseAdmin } from '$lib/server/supabase-admin'
-import type { Actions, PageServerLoad } from './$types'
-
-function photoUrl(path: string) {
-	return `${PUBLIC_SUPABASE_URL}/storage/v1/object/public/punch-photos/${path}`
-}
-
-export const load: PageServerLoad = async ({ params, locals: { safeGetSession, supabase } }) => {
-	const { user } = await safeGetSession()
-
-	const { data: item } = await supabase
-		.from('punch_items')
-		.select('*, projects(name)')
-		.eq('share_token', params.token)
-		.single()
-
-	if (!item) error(404, 'Item not found.')
-
-	const [{ data: photos }, { data: comments }] = await Promise.all([
-		supabase.from('photos').select('*').eq('punch_item_id', item.id).order('created_at'),
-		supabase.from('comments').select('*').eq('punch_item_id', item.id).order('created_at')
-	])
-
-	return {
-		item,
-		photos: (photos ?? []).map((p) => ({ ...p, url: photoUrl(p.storage_path) })),
-		comments: comments ?? [],
-		isOwner: !!user && user.id === item.created_by
-	}
-}
+import type { Actions } from './$types'
 
 export const actions: Actions = {
 	resolve: async ({ request, params }) => {
@@ -39,7 +10,6 @@ export const actions: Actions = {
 		const photo = data.get('photo') as File | null
 
 		if (!workerName) return fail(400, { action: 'resolve', error: 'Enter your name.' })
-		if (!photo || photo.size === 0) return fail(400, { action: 'resolve', error: 'Solution photo is required.' })
 
 		const { data: item } = await supabaseAdmin
 			.from('punch_items')
@@ -52,35 +22,42 @@ export const actions: Actions = {
 			return fail(400, { action: 'resolve', error: 'Item is not open for repair.' })
 		}
 
-		const ext = photo.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-		const storagePath = `${item.id}/solution_${Date.now()}.${ext}`
-		const buffer = await photo.arrayBuffer()
+		const inserts: PromiseLike<unknown>[] = [
+			supabaseAdmin.from('punch_items').update({ status: 'resolved' }).eq('id', item.id)
+		]
 
-		const { error: uploadError } = await supabaseAdmin.storage
-			.from('punch-photos')
-			.upload(storagePath, buffer, { contentType: photo.type, upsert: false })
+		if (photo && photo.size > 0) {
+			const ext = photo.name.split('.').pop()?.toLowerCase() ?? 'webp'
+			const storagePath = `${item.id}/solution_${Date.now()}.${ext}`
+			const buffer = await photo.arrayBuffer()
 
-		if (uploadError) return fail(500, { action: 'resolve', error: 'Error uploading photo.' })
+			const { error: uploadError } = await supabaseAdmin.storage
+				.from('punch-photos')
+				.upload(storagePath, buffer, { contentType: photo.type, upsert: false })
 
-		await Promise.all([
-			supabaseAdmin.from('photos').insert({
-				punch_item_id: item.id,
-				type: 'solution',
-				storage_path: storagePath,
-				created_by_name: workerName
-			}),
-			supabaseAdmin
-				.from('punch_items')
-				.update({ status: 'resolved' })
-				.eq('id', item.id),
-			...(note
-				? [supabaseAdmin.from('comments').insert({
-						punch_item_id: item.id,
-						body: note,
-						author_name: workerName
-					})]
-				: [])
-		])
+			if (uploadError) return fail(500, { action: 'resolve', error: 'Error uploading photo.' })
+
+			inserts.push(
+				supabaseAdmin.from('photos').insert({
+					punch_item_id: item.id,
+					type: 'solution',
+					storage_path: storagePath,
+					created_by_name: workerName
+				})
+			)
+		}
+
+		if (note) {
+			inserts.push(
+				supabaseAdmin.from('comments').insert({
+					punch_item_id: item.id,
+					body: note,
+					author_name: workerName
+				})
+			)
+		}
+
+		await Promise.all(inserts)
 
 		return { resolveSuccess: true }
 	},
@@ -94,11 +71,20 @@ export const actions: Actions = {
 
 		const { data: item } = await supabaseAdmin
 			.from('punch_items')
-			.select('id, created_by')
+			.select('id, project_id')
 			.eq('share_token', params.token)
 			.single()
 
-		if (!item || item.created_by !== user.id) {
+		if (!item) return fail(404, { action: 'close', error: 'Item not found.' })
+
+		const { data: membership } = await supabaseAdmin
+			.from('project_users')
+			.select('role')
+			.eq('project_id', item.project_id!)
+			.eq('user_id', user.id)
+			.single()
+
+		if (!membership || membership.role !== 'owner') {
 			return fail(403, { action: 'close', error: 'You do not have permission to close this item.' })
 		}
 
@@ -128,11 +114,20 @@ export const actions: Actions = {
 
 		const { data: item } = await supabaseAdmin
 			.from('punch_items')
-			.select('id, created_by')
+			.select('id, project_id')
 			.eq('share_token', params.token)
 			.single()
 
-		if (!item || item.created_by !== user.id) {
+		if (!item) return fail(404, { action: 'reopen', error: 'Item not found.' })
+
+		const { data: membership } = await supabaseAdmin
+			.from('project_users')
+			.select('role')
+			.eq('project_id', item.project_id!)
+			.eq('user_id', user.id)
+			.single()
+
+		if (!membership || membership.role !== 'owner') {
 			return fail(403, { action: 'reopen', error: 'You do not have permission to return this item.' })
 		}
 
@@ -147,5 +142,71 @@ export const actions: Actions = {
 		])
 
 		return { reopenSuccess: true }
+	},
+
+	update_item: async ({ request, params, locals: { safeGetSession } }) => {
+		const { user } = await safeGetSession()
+		if (!user) return fail(401, { action: 'update_item', error: 'Not logged in.' })
+
+		const data = await request.formData()
+		const title = (data.get('title') as string)?.trim()
+		const description = (data.get('description') as string)?.trim() || null
+		const assigned_to = (data.get('assigned_to') as string)?.trim() || null
+		const area_id = (data.get('area_id') as string) || null
+
+		if (!title) return fail(400, { action: 'update_item', error: 'Title is required.' })
+
+		const { data: item } = await supabaseAdmin
+			.from('punch_items')
+			.select('id, project_id')
+			.eq('share_token', params.token)
+			.single()
+
+		if (!item) return fail(404, { action: 'update_item', error: 'Item not found.' })
+
+		const { data: membership } = await supabaseAdmin
+			.from('project_users')
+			.select('role')
+			.eq('project_id', item.project_id!)
+			.eq('user_id', user.id)
+			.single()
+
+		if (!membership) return fail(403, { action: 'update_item', error: 'No access.' })
+
+		await supabaseAdmin
+			.from('punch_items')
+			.update({ title, description, assigned_to, area_id })
+			.eq('id', item.id)
+
+		return { updateItemSuccess: true }
+	},
+
+	update_area: async ({ request, params, locals: { safeGetSession } }) => {
+		const { user } = await safeGetSession()
+		if (!user) return fail(401, { action: 'update_area', error: 'Not logged in.' })
+
+		const data = await request.formData()
+		const area_id = (data.get('area_id') as string) || null
+
+		const { data: item } = await supabaseAdmin
+			.from('punch_items')
+			.select('id, project_id')
+			.eq('share_token', params.token)
+			.single()
+
+		if (!item) return fail(404, { action: 'update_area', error: 'Item not found.' })
+
+		const { data: membership } = await supabaseAdmin
+			.from('project_users')
+			.select('role')
+			.eq('project_id', item.project_id!)
+			.eq('user_id', user.id)
+			.single()
+
+		if (!membership) return fail(403, { action: 'update_area', error: 'No access.' })
+
+		await supabaseAdmin.from('punch_items').update({ area_id }).eq('id', item.id)
+
+		return { updateAreaSuccess: true }
 	}
 }

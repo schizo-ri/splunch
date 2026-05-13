@@ -1,16 +1,37 @@
 import { fail, redirect } from '@sveltejs/kit'
+import type { ProjectRole } from '$lib/types/database'
 import type { Actions, PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async ({ locals: { safeGetSession, supabase } }) => {
 	const { session, user } = await safeGetSession()
-	if (!session) redirect(303, '/login')
+	if (!session || !user) redirect(303, '/login')
 
-	const { data: projects } = await supabase
-		.from('projects')
-		.select('id, name, address, created_at')
-		.order('created_at', { ascending: false })
+	const [{ data: projects }, { data: myRoles }, { data: profile }] = await Promise.all([
+		supabase
+			.from('projects')
+			.select('id, name, address, created_at')
+			.order('created_at', { ascending: false }),
+		supabase
+			.from('project_users')
+			.select('project_id, role')
+			.eq('user_id', user.id),
+		supabase
+			.from('profiles')
+			.select('is_superadmin')
+			.eq('id', user.id)
+			.single()
+	])
 
-	return { user, projects: projects ?? [] }
+	const roleMap = new Map(myRoles?.map(r => [r.project_id, r.role as ProjectRole]) ?? [])
+
+	return {
+		user,
+		isSuperadmin: profile?.is_superadmin ?? false,
+		projects: (projects ?? []).map(p => ({
+			...p,
+			role: roleMap.get(p.id) ?? ('member' as ProjectRole)
+		}))
+	}
 }
 
 export const actions: Actions = {

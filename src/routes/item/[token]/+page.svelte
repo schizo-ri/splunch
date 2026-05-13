@@ -5,8 +5,11 @@
 	import { STATUS_LABEL, STATUS_BADGE_CLASS } from '$lib/status';
 	import ShareButton from '$lib/components/ShareButton.svelte';
 	import AnnotationView from '$lib/components/AnnotationView.svelte';
+	import { compressImage } from '$lib/compress';
+	import { enqueueResolve, getPendingCount, syncQueue } from '$lib/offline-queue';
 	import type { PunchStatus } from '$lib/types/database';
 	import type { ActionData, PageData } from './$types';
+	import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -14,38 +17,65 @@
 	const problemPhoto = $derived(data.photos.find((p) => p.type === 'problem'));
 	const solutionPhotos = $derived(data.photos.filter((p) => p.type === 'solution'));
 	const status = $derived(item.status as PunchStatus);
+	const isOwner = $derived(data.userRole === 'owner');
+	const isMember = $derived(data.userRole !== null);
 
 	let workerName = $state('');
 	let resolvePhoto = $state<string | null>(null);
+	let resolveBlob = $state<Blob | null>(null);
 	let resolveInput = $state<HTMLInputElement | null>(null);
 	let resolving = $state(false);
 	let closing = $state(false);
 	let reopening = $state(false);
-	let showReopenForm = $state(false);
+	let _showReopenForm = $state(false);
+	const showReopenForm = $derived(
+		_showReopenForm && !(form?.reopenSuccess || form?.closeSuccess || form?.resolveSuccess)
+	);
+	let _editing = $state(false);
+	const editing = $derived(_editing && !form?.updateItemSuccess);
+	let saving = $state(false);
+	let pendingCount = $state(0);
+	let syncing = $state(false);
+	let offlineQueued = $state(false);
 
-	onMount(() => {
+	onMount(async () => {
 		workerName = localStorage.getItem('splunch_worker_name') ?? '';
+		pendingCount = await getPendingCount();
 	});
 
 	function saveWorkerName() {
 		if (workerName.trim()) localStorage.setItem('splunch_worker_name', workerName.trim());
 	}
 
-	function onResolvePhoto(e: Event) {
+	async function onResolvePhoto(e: Event) {
 		const file = (e.target as HTMLInputElement).files?.[0];
-		if (file) resolvePhoto = URL.createObjectURL(file);
+		if (!file) return;
+		const compressed = await compressImage(file);
+		resolveBlob = compressed;
+		resolvePhoto = URL.createObjectURL(compressed);
 	}
 
 	function clearResolvePhoto() {
 		resolvePhoto = null;
+		resolveBlob = null;
 		if (resolveInput) resolveInput.value = '';
 	}
 
-	$effect(() => {
-		if (form?.resolveSuccess || form?.closeSuccess || form?.reopenSuccess) {
-			showReopenForm = false;
-		}
-	});
+	async function handleSync() {
+		syncing = true;
+		await syncQueue(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+		pendingCount = await getPendingCount();
+		syncing = false;
+		if (pendingCount === 0) location.reload();
+	}
+
+	async function handleResolveOffline(workerNameVal: string, noteVal: string | null) {
+		await enqueueResolve(item.share_token, workerNameVal, noteVal, resolveBlob);
+		pendingCount = await getPendingCount();
+		offlineQueued = true;
+		resolving = false;
+	}
+
 </script>
 
 <svelte:head>
@@ -55,7 +85,7 @@
 <div class="layout">
 	<header class="topbar safe-top">
 		<div class="topbar-inner">
-			{#if data.isOwner}
+			{#if isMember}
 				<a class="back-btn" href="/project/{item.project_id}">‹ Back</a>
 			{:else}
 				<span class="topbar-logo">Splunch</span>
@@ -100,14 +130,136 @@
 		<div class="content container">
 			<!-- Item details -->
 			<div class="item-header">
-				<h1 class="item-title">{item.title}</h1>
-				{#if item.description}
-					<p class="item-description text-secondary">{item.description}</p>
-				{/if}
-				{#if item.assigned_to}
-					<p class="item-assigned text-sm text-muted">
-						Assigned to: <strong>{item.assigned_to}</strong>
-					</p>
+				{#if editing}
+					<form
+						method="POST"
+						action="?/update_item"
+						use:enhance={() => {
+							saving = true;
+							return async ({ update }) => {
+								await update({ reset: false });
+								saving = false;
+							};
+						}}
+						class="edit-form"
+					>
+						{#if form?.action === 'update_item' && form.error}
+							<div class="error-banner" role="alert">{form.error}</div>
+						{/if}
+						<div class="field">
+							<label class="label" for="edit-title">Title <span aria-hidden="true">*</span></label>
+							<input
+								class="input"
+								type="text"
+								id="edit-title"
+								name="title"
+								value={item.title}
+								required
+								disabled={saving}
+							/>
+						</div>
+						<div class="field">
+							<label class="label" for="edit-description">Description</label>
+							<textarea
+								class="textarea"
+								id="edit-description"
+								name="description"
+								rows="3"
+								disabled={saving}
+							>{item.description ?? ''}</textarea>
+						</div>
+						<div class="field">
+							<label class="label" for="edit-assigned">Assigned to</label>
+							<input
+								class="input"
+								type="text"
+								id="edit-assigned"
+								name="assigned_to"
+								value={item.assigned_to ?? ''}
+								placeholder="Name, nickname or email"
+								autocomplete="off"
+								disabled={saving}
+							/>
+						</div>
+						{#if data.areas.length > 0}
+							<div class="field">
+								<label class="label" for="edit-area">Area</label>
+								<select
+									class="input"
+									id="edit-area"
+									name="area_id"
+									value={item.area_id ?? ''}
+									disabled={saving}
+								>
+									<option value="">No area</option>
+									{#each data.areas as area (area.id)}
+										<option value={area.id}>{area.name}</option>
+									{/each}
+								</select>
+							</div>
+						{/if}
+						<div class="edit-buttons">
+							<button
+								type="button"
+								class="btn btn-ghost btn-sm"
+								onclick={() => (_editing = false)}
+								disabled={saving}
+							>Cancel</button>
+							<button class="btn btn-primary btn-sm" type="submit" disabled={saving}>
+								{#if saving}<span class="spinner"></span>{:else}Save{/if}
+							</button>
+						</div>
+					</form>
+				{:else}
+					<div class="item-title-row">
+						<h1 class="item-title">{item.title}</h1>
+						{#if isMember}
+							<button
+								class="edit-btn"
+								type="button"
+								onclick={() => (_editing = true)}
+								aria-label="Edit item"
+							>
+								<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+									<path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+								</svg>
+							</button>
+						{/if}
+					</div>
+					{#if item.description}
+						<p class="item-description text-secondary">{item.description}</p>
+					{/if}
+
+					{#if isMember && data.areas.length > 0}
+						<form
+							method="POST"
+							action="?/update_area"
+							use:enhance={() => async ({ update }) => { await update({ reset: false }) }}
+							class="area-form"
+						>
+							<label class="area-select-label text-sm text-muted" for="area_id">📍 Area</label>
+							<select
+								class="area-select"
+								id="area_id"
+								name="area_id"
+								value={item.area_id ?? ''}
+								onchange={(e) => e.currentTarget.form?.requestSubmit()}
+							>
+								<option value="">No area</option>
+								{#each data.areas as area (area.id)}
+									<option value={area.id}>{area.name}</option>
+								{/each}
+							</select>
+						</form>
+					{:else if (item as any).areas?.name}
+						<p class="item-meta text-sm text-muted">📍 {(item as any).areas.name}</p>
+					{/if}
+
+					{#if item.assigned_to}
+						<p class="item-meta text-sm text-muted">
+							Assigned to: <strong>{item.assigned_to}</strong>
+						</p>
+					{/if}
 				{/if}
 			</div>
 
@@ -143,91 +295,119 @@
 				<div class="action-block card">
 					<h2 class="section-label">Mark as resolved</h2>
 
-					<form
-						method="POST"
-						action="?/resolve"
-						enctype="multipart/form-data"
-						use:enhance={() => {
-							saveWorkerName();
-							resolving = true;
-							return async ({ update }) => {
-								await update();
-								resolving = false;
-							};
-						}}
-					>
-						<div class="form-fields">
-							<div class="field">
-								<label class="label" for="worker_name"
-									>Your name <span aria-hidden="true">*</span></label
-								>
-								<input
-									class="input"
-									type="text"
-									id="worker_name"
-									name="worker_name"
-									bind:value={workerName}
-									placeholder="Name or nickname"
-									autocomplete="name"
-									required
-									disabled={resolving}
-								/>
-							</div>
-
-							<div class="field">
-								<label class="label" for="note">Note</label>
-								<textarea
-									class="textarea"
-									id="note"
-									name="note"
-									placeholder="What did you do?"
-									rows="2"
-									disabled={resolving}
-								></textarea>
-							</div>
-
-							<div class="field">
-								<span class="label">Solution photo <span aria-hidden="true">*</span></span>
-								<input
-									bind:this={resolveInput}
-									type="file"
-									id="resolve-photo"
-									name="photo"
-									accept="image/*"
-									required
-									disabled={resolving}
-									onchange={onResolvePhoto}
-									class="file-input-hidden"
-								/>
-								{#if resolvePhoto}
-									<div class="photo-preview-wrap">
-										<img class="photo-preview" src={resolvePhoto} alt="Pregled" />
-										<button
-											type="button"
-											class="photo-clear"
-											onclick={clearResolvePhoto}
-											aria-label="Remove">✕</button
-										>
-									</div>
-								{:else}
-									<label class="photo-picker" for="resolve-photo">
-										<span class="photo-picker-icon" aria-hidden="true">📷</span>
-										<span>Take a photo or choose an image</span>
-									</label>
-								{/if}
-							</div>
+					{#if offlineQueued}
+						<div class="offline-banner" role="status">
+							<span>Saved offline — will sync when back online.</span>
+							<button class="btn btn-sm btn-secondary" onclick={handleSync} disabled={syncing}>
+								{#if syncing}<span class="spinner spinner-sm"></span>{:else}Sync now{/if}
+							</button>
 						</div>
+					{:else}
+						<form
+							method="POST"
+							action="?/resolve"
+							enctype="multipart/form-data"
+							use:enhance={({ cancel, formData }) => {
+								if (!navigator.onLine) {
+									cancel();
+									const name = (formData.get('worker_name') as string)?.trim();
+									const note = (formData.get('note') as string)?.trim() || null;
+									if (!name) return;
+									saveWorkerName();
+									resolving = true;
+									handleResolveOffline(name, note);
+									return;
+								}
+								saveWorkerName();
+								resolving = true;
+								return async ({ update }) => {
+									await update();
+									resolving = false;
+								};
+							}}
+						>
+							<div class="form-fields">
+								<div class="field">
+									<label class="label" for="worker_name"
+										>Your name <span aria-hidden="true">*</span></label
+									>
+									<input
+										class="input"
+										type="text"
+										id="worker_name"
+										name="worker_name"
+										bind:value={workerName}
+										placeholder="Name or nickname"
+										autocomplete="name"
+										required
+										disabled={resolving}
+									/>
+								</div>
 
-						<button class="btn btn-primary btn-full" type="submit" disabled={resolving}>
-							{#if resolving}<span class="spinner"></span>{/if}
-							Submit solution
-						</button>
-					</form>
+								<div class="field">
+									<label class="label" for="note">Note</label>
+									<textarea
+										class="textarea"
+										id="note"
+										name="note"
+										placeholder="What did you do?"
+										rows="2"
+										disabled={resolving}
+									></textarea>
+								</div>
+
+								<div class="field">
+									<span class="label">Solution photo</span>
+									<input
+										bind:this={resolveInput}
+										type="file"
+										id="resolve-photo"
+										name="photo"
+										accept="image/*"
+										disabled={resolving}
+										onchange={onResolvePhoto}
+										class="file-input-hidden"
+									/>
+									{#if resolvePhoto}
+										<div class="photo-preview-wrap">
+											<img class="photo-preview" src={resolvePhoto} alt="Preview" />
+											<button
+												type="button"
+												class="photo-clear"
+												onclick={clearResolvePhoto}
+												aria-label="Remove">✕</button
+											>
+										</div>
+									{:else}
+										<label class="photo-picker" for="resolve-photo">
+											<span class="photo-picker-icon" aria-hidden="true">📷</span>
+											<span>Take a photo or choose an image</span>
+										</label>
+									{/if}
+								</div>
+							</div>
+
+							<button class="btn btn-primary btn-full" type="submit" disabled={resolving}>
+								{#if resolving}<span class="spinner"></span>{/if}
+								Submit solution
+							</button>
+						</form>
+					{/if}
+				</div>
+			{/if}
+
+			<!-- Pending sync banner (top of page context) -->
+			{#if pendingCount > 0 && !offlineQueued}
+				<div class="offline-banner offline-banner-pending" role="status">
+					<span>{pendingCount} solution{pendingCount > 1 ? 's' : ''} waiting to sync</span>
+					<button class="btn btn-sm btn-secondary" onclick={handleSync} disabled={syncing}>
+						{#if syncing}<span class="spinner spinner-sm"></span>{:else}Sync now{/if}
+					</button>
 				</div>
 			{/if}
 
 			<!-- Foreman controls (owner only, when resolved) -->
-			{#if data.isOwner && status === 'resolved'}
+			{#if isOwner && status === 'resolved'}
 				<div class="action-block card">
 					<h2 class="section-label">Review solution</h2>
 
@@ -267,7 +447,7 @@
 						{#if !showReopenForm}
 							<button
 								class="btn btn-secondary btn-full"
-								onclick={() => (showReopenForm = true)}
+								onclick={() => (_showReopenForm = true)}
 								disabled={closing}
 							>
 								Return for repair
@@ -302,7 +482,7 @@
 									<button
 										class="btn btn-ghost"
 										type="button"
-										onclick={() => (showReopenForm = false)}
+										onclick={() => (_showReopenForm = false)}
 										disabled={reopening}
 									>
 										Cancel
@@ -465,8 +645,74 @@
 		line-height: var(--leading-tight);
 	}
 
+	.item-title-row {
+		display: flex;
+		align-items: flex-start;
+		gap: var(--space-2);
+	}
+
+	.edit-btn {
+		flex-shrink: 0;
+		margin-top: 4px;
+		background: none;
+		border: none;
+		color: var(--color-text-muted);
+		cursor: pointer;
+		padding: var(--space-1);
+		border-radius: var(--radius-sm);
+		transition: color var(--transition-fast);
+		line-height: 1;
+	}
+
+	.edit-btn:hover {
+		color: var(--color-text);
+	}
+
+	.edit-form {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-3);
+	}
+
+	.edit-buttons {
+		display: flex;
+		gap: var(--space-2);
+		justify-content: flex-end;
+	}
+
 	.item-description {
 		line-height: var(--leading-relaxed);
+	}
+
+	.item-meta {
+		line-height: var(--leading-normal);
+	}
+
+	.area-form {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+	}
+
+	.area-select-label {
+		white-space: nowrap;
+	}
+
+	.area-select {
+		font-size: var(--text-sm);
+		color: var(--color-text-secondary);
+		background: transparent;
+		border: none;
+		border-bottom: 1px dashed var(--color-border-strong);
+		padding: 1px var(--space-1);
+		cursor: pointer;
+		min-width: 0;
+	}
+
+	.area-select:focus {
+		outline: none;
+		border-bottom-color: var(--color-brand);
+		color: var(--color-text);
 	}
 
 	.error-banner {
@@ -600,6 +846,31 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+	}
+
+	/* Offline banner */
+	.offline-banner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-3);
+		padding: var(--space-3) var(--space-4);
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+		font-size: var(--text-sm);
+		color: var(--color-text-secondary);
+	}
+
+	.offline-banner-pending {
+		background: color-mix(in srgb, var(--color-brand) 8%, transparent);
+		border-color: color-mix(in srgb, var(--color-brand) 30%, transparent);
+		color: var(--color-text);
+	}
+
+	.spinner-sm {
+		width: 0.8em;
+		height: 0.8em;
 	}
 
 	/* Comments */

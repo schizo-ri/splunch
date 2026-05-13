@@ -12,6 +12,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      area_templates: {
+        Row: {
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      areas: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          project_id: string
+          sort_order: number
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          project_id: string
+          sort_order?: number
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          project_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'areas_project_id_fkey'
+            columns: ['project_id']
+            isOneToOne: false
+            referencedRelation: 'projects'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       comments: {
         Row: {
           author_name: string
@@ -85,6 +141,56 @@ export type Database = {
           }
         ]
       }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          is_superadmin: boolean
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          is_superadmin?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_superadmin?: boolean
+        }
+        Relationships: []
+      }
+      project_users: {
+        Row: {
+          created_at: string
+          invited_by: string | null
+          project_id: string
+          role: 'owner' | 'member'
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          invited_by?: string | null
+          project_id: string
+          role: 'owner' | 'member'
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          invited_by?: string | null
+          project_id?: string
+          role?: 'owner' | 'member'
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'project_users_project_id_fkey'
+            columns: ['project_id']
+            isOneToOne: false
+            referencedRelation: 'projects'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       projects: {
         Row: {
           address: string | null
@@ -111,6 +217,7 @@ export type Database = {
       }
       punch_items: {
         Row: {
+          area_id: string | null
           assigned_to: string | null
           created_at: string | null
           created_by: string
@@ -123,6 +230,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          area_id?: string | null
           assigned_to?: string | null
           created_at?: string | null
           created_by: string
@@ -135,6 +243,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          area_id?: string | null
           assigned_to?: string | null
           created_at?: string | null
           created_by?: string
@@ -147,6 +256,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: 'punch_items_area_id_fkey'
+            columns: ['area_id']
+            isOneToOne: false
+            referencedRelation: 'areas'
+            referencedColumns: ['id']
+          },
           {
             foreignKeyName: 'punch_items_project_id_fkey'
             columns: ['project_id']
@@ -161,7 +277,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_project_member: { Args: { p_project_id: string }; Returns: boolean }
+      is_project_owner: { Args: { p_project_id: string }; Returns: boolean }
+      is_superadmin: { Args: Record<never, never>; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
@@ -185,13 +303,18 @@ export type TablesUpdate<T extends keyof DefaultSchema['Tables']> =
   DefaultSchema['Tables'][T]['Update']
 
 // Convenience aliases
-export type Project = Tables<'projects'>
-export type PunchItem = Tables<'punch_items'>
-export type Photo = Tables<'photos'>
-export type Comment = Tables<'comments'>
+export type Project     = Tables<'projects'>
+export type PunchItem   = Tables<'punch_items'>
+export type Photo       = Tables<'photos'>
+export type Comment     = Tables<'comments'>
+export type Area        = Tables<'areas'>
+export type AreaTemplate = Tables<'area_templates'>
+export type Profile     = Tables<'profiles'>
+export type ProjectUser = Tables<'project_users'>
 
+export type ProjectRole = 'owner' | 'member'
 export type PunchStatus = 'open' | 'resolved' | 'reviewed' | 'closed' | 'reopened'
-export type PhotoType = 'problem' | 'solution'
+export type PhotoType   = 'problem' | 'solution'
 
 export type Annotation =
   | { type: 'circle'; x: number; y: number; rx: number; ry: number }

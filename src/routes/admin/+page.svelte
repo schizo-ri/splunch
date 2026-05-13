@@ -4,49 +4,44 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	let showNewProject = $state(false);
+	let showCreateForm = $state(false);
 	let creating = $state(false);
+	let showPassword = $state(false);
 
 	$effect(() => {
-		if (form?.success) showNewProject = false;
+		if (form?.success) showCreateForm = false;
 	});
 </script>
 
 <svelte:head>
-	<title>Projects — Splunch</title>
+	<title>Admin — Splunch</title>
 </svelte:head>
 
 <div class="layout">
 	<header class="topbar safe-top">
 		<div class="topbar-inner">
-			<span class="topbar-logo">Splunch</span>
-			<div class="topbar-right">
-				{#if data.isSuperadmin}
-					<a class="btn btn-ghost btn-sm" href="/admin">Admin</a>
-				{/if}
-				<form method="POST" action="/logout">
-					<button class="btn btn-ghost btn-sm" type="submit">Log out</button>
-				</form>
-			</div>
+			<a class="back-btn" href="/dashboard">‹ Dashboard</a>
+			<span class="topbar-title">Admin</span>
+			<div style="width: 6rem"></div>
 		</div>
 	</header>
 
 	<main class="main container">
 		<div class="section-header">
-			<h1 class="section-title">Projects</h1>
+			<h1 class="section-title">Users</h1>
 			<button
 				class="btn btn-primary btn-sm"
-				onclick={() => (showNewProject = !showNewProject)}
+				onclick={() => (showCreateForm = !showCreateForm)}
 			>
-				{showNewProject ? 'Cancel' : '+ New project'}
+				{showCreateForm ? 'Cancel' : '+ New user'}
 			</button>
 		</div>
 
-		{#if showNewProject}
+		{#if showCreateForm}
 			<form
-				class="new-project-form card"
+				class="create-form card"
 				method="POST"
-				action="?/create"
+				action="?/create_user"
 				use:enhance={() => {
 					creating = true;
 					return async ({ update }) => {
@@ -55,20 +50,20 @@
 					};
 				}}
 			>
-				<h2 class="form-title">New project</h2>
+				<h2 class="form-title">New user</h2>
 
 				{#if form?.error}
 					<div class="error-banner" role="alert">{form.error}</div>
 				{/if}
 
 				<div class="field">
-					<label class="label" for="name">Name <span aria-hidden="true">*</span></label>
+					<label class="label" for="email">Email <span aria-hidden="true">*</span></label>
 					<input
 						class="input"
-						type="text"
-						id="name"
-						name="name"
-						placeholder="e.g. Main Street Building"
+						type="email"
+						id="email"
+						name="email"
+						placeholder="user@example.com"
 						autocomplete="off"
 						required
 						disabled={creating}
@@ -76,45 +71,69 @@
 				</div>
 
 				<div class="field">
-					<label class="label" for="address">Address</label>
-					<input
-						class="input"
-						type="text"
-						id="address"
-						name="address"
-						placeholder="Street address"
-						autocomplete="off"
-						disabled={creating}
-					/>
+					<label class="label" for="password">
+						Temporary password <span aria-hidden="true">*</span>
+					</label>
+					<div class="password-row">
+						<input
+							class="input"
+							type={showPassword ? 'text' : 'password'}
+							id="password"
+							name="password"
+							placeholder="Min. 8 characters"
+							autocomplete="new-password"
+							required
+							minlength="8"
+							disabled={creating}
+						/>
+						<button
+							type="button"
+							class="btn btn-ghost btn-sm"
+							onclick={() => (showPassword = !showPassword)}
+						>
+							{showPassword ? 'Hide' : 'Show'}
+						</button>
+					</div>
 				</div>
 
 				<button class="btn btn-primary btn-full" type="submit" disabled={creating}>
 					{#if creating}<span class="spinner"></span>{/if}
-					Create project
+					Create user
 				</button>
 			</form>
 		{/if}
 
-		{#if data.projects.length === 0}
+		{#if data.users.length === 0}
 			<div class="empty">
-				<p>No projects yet.</p>
-				<p class="text-muted text-sm">Create your first project above.</p>
+				<p>No users yet.</p>
 			</div>
 		{:else}
-			<ul class="project-list">
-				{#each data.projects as project (project.id)}
+			<ul class="user-list">
+				{#each data.users as user (user.id)}
 					<li>
-						<a class="project-card card" href="/project/{project.id}">
-							<div class="project-info">
-								<div class="project-name-row">
-									<span class="project-name">{project.name}</span>
-									{#if project.role === 'member'}
-										<span class="role-badge">Member</span>
+						<a class="user-card card" href="/admin/user/{user.id}">
+							<div class="user-info">
+								<div class="user-email-row">
+									<span class="user-email">{user.email}</span>
+									{#if user.is_superadmin}
+										<span class="badge badge-admin">Admin</span>
 									{/if}
 								</div>
-								{#if project.address}
-									<span class="project-address text-sm text-secondary">{project.address}</span>
-								{/if}
+								<span class="user-projects text-sm text-secondary">
+									{#if user.projects.owner === 0 && user.projects.member === 0}
+										No projects
+									{:else}
+										{#if user.projects.owner > 0}
+											Owner: {user.projects.owner}
+										{/if}
+										{#if user.projects.owner > 0 && user.projects.member > 0}
+											·
+										{/if}
+										{#if user.projects.member > 0}
+											Member: {user.projects.member}
+										{/if}
+									{/if}
+								</span>
 							</div>
 							<span class="arrow" aria-hidden="true">›</span>
 						</a>
@@ -150,16 +169,16 @@
 		justify-content: space-between;
 	}
 
-	.topbar-logo {
-		font-size: var(--text-lg);
-		font-weight: var(--weight-bold);
-		letter-spacing: -0.02em;
+	.back-btn {
+		font-size: var(--text-sm);
+		color: var(--color-brand-dark);
+		font-weight: var(--weight-medium);
+		min-width: 6rem;
 	}
 
-	.topbar-right {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
+	.topbar-title {
+		font-size: var(--text-base);
+		font-weight: var(--weight-semibold);
 	}
 
 	.btn-sm {
@@ -186,7 +205,7 @@
 		font-weight: var(--weight-bold);
 	}
 
-	.new-project-form {
+	.create-form {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-4);
@@ -209,68 +228,71 @@
 		font-weight: var(--weight-medium);
 	}
 
+	.password-row {
+		display: flex;
+		gap: var(--space-2);
+	}
+
+	.password-row .input {
+		flex: 1;
+	}
+
 	.empty {
 		text-align: center;
 		padding: var(--space-16) var(--space-4);
 		color: var(--color-text-secondary);
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-2);
 	}
 
-	.project-list {
+	.user-list {
 		list-style: none;
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-3);
 	}
 
-	.project-card {
+	.user-card {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		padding: var(--space-4) var(--space-5);
-		transition: box-shadow var(--transition-fast);
 		-webkit-tap-highlight-color: transparent;
 	}
 
-	.project-card:active {
-		box-shadow: var(--shadow-md);
-	}
-
-	.project-info {
+	.user-info {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-1);
 		min-width: 0;
 	}
 
-	.project-name-row {
+	.user-email-row {
 		display: flex;
 		align-items: center;
 		gap: var(--space-2);
-		min-width: 0;
 	}
 
-	.project-name {
-		font-weight: var(--weight-semibold);
+	.user-email {
+		font-weight: var(--weight-medium);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
 
-	.role-badge {
+	.badge {
 		flex-shrink: 0;
 		font-size: var(--text-xs);
-		font-weight: var(--weight-medium);
-		color: var(--color-text-muted);
-		background: var(--color-bg);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-full);
+		font-weight: var(--weight-semibold);
 		padding: 1px var(--space-2);
+		border-radius: var(--radius-full);
 	}
 
-	.project-address {
+	.badge-admin {
+		background: var(--color-reviewed-bg);
+		color: var(--color-reviewed-fg);
+		border: 1px solid var(--color-reviewed);
+	}
+
+	.user-projects {
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;

@@ -10,11 +10,17 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	let showForm = $state(false);
+	let showAreaForm = $state(false);
+	let manageAreas = $state(false);
+	let showArchivedAreas = $state(false);
 	let creating = $state(false);
+	let creatingArea = $state(false);
 	let photoPreview = $state<string | null>(null);
 	let photoInput = $state<HTMLInputElement | null>(null);
 	let annotations = $state<Annotation[]>([]);
-	let activeFilter = $state<PunchStatus | 'all'>('all');
+	let activeStatus = $state<PunchStatus | 'all'>('all');
+	let activeArea = $state<string | 'all'>('all');
+	let formAreaId = $state('');
 
 	const ALL_STATUSES: PunchStatus[] = ['open', 'reopened', 'resolved', 'reviewed', 'closed'];
 
@@ -27,11 +33,14 @@
 		return map;
 	});
 
-	const filteredItems = $derived(() =>
-		activeFilter === 'all'
-			? data.items
-			: data.items.filter(i => i.status === activeFilter)
-	);
+	const filteredItems = $derived(() => {
+		let items = data.items;
+		if (activeStatus !== 'all') items = items.filter((i) => i.status === activeStatus);
+		if (activeArea !== 'all') items = items.filter((i) => i.area_id === activeArea);
+		return items;
+	});
+
+	const areaMap = $derived(() => new Map(data.areas.map((a) => [a.id, a.name])));
 
 	$effect(() => {
 		if (form?.success) {
@@ -39,7 +48,15 @@
 			photoPreview = null;
 			annotations = [];
 		}
+		if (form?.areaSuccess) {
+			showAreaForm = false;
+		}
 	});
+
+	function openIssueForm() {
+		showForm = !showForm;
+		if (showForm) formAreaId = activeArea !== 'all' ? activeArea : '';
+	}
 
 	function onPhotoChange(e: Event) {
 		const file = (e.target as HTMLInputElement).files?.[0];
@@ -50,6 +67,11 @@
 	function clearPhoto() {
 		photoPreview = null;
 		if (photoInput) photoInput.value = '';
+	}
+
+	function selectArea(id: string | 'all') {
+		if (manageAreas) return;
+		activeArea = id;
 	}
 </script>
 
@@ -73,12 +95,140 @@
 			<p class="project-address text-secondary text-sm">{data.project.address}</p>
 		{/if}
 
+		<!-- Areas section -->
+		<div class="areas-section">
+			<div class="areas-header">
+				<span class="areas-label">Areas</span>
+				{#if data.userRole === 'owner'}
+					<button
+						class="btn-text"
+						type="button"
+						onclick={() => { manageAreas = !manageAreas; showAreaForm = false; }}
+					>
+						{manageAreas ? 'Done' : 'Manage'}
+					</button>
+				{/if}
+			</div>
+
+			<div class="areas-chips">
+				{#if !manageAreas}
+					<button
+						class="area-chip"
+						class:active={activeArea === 'all'}
+						type="button"
+						onclick={() => selectArea('all')}
+					>All</button>
+				{/if}
+
+				{#each data.areas as area (area.id)}
+					{#if manageAreas}
+						<div class="area-chip-manage">
+							<span class="area-chip-name">{area.name}</span>
+							<form method="POST" action="?/archive_area" use:enhance>
+								<input type="hidden" name="id" value={area.id} />
+								<button type="submit" class="area-archive-btn" aria-label="Archive {area.name}">
+									Archive
+								</button>
+							</form>
+						</div>
+					{:else}
+						<button
+							class="area-chip"
+							class:active={activeArea === area.id}
+							type="button"
+							onclick={() => selectArea(area.id)}
+						>{area.name}</button>
+					{/if}
+				{/each}
+
+				{#if !manageAreas}
+					<button
+						class="area-chip area-chip-add"
+						type="button"
+						onclick={() => (showAreaForm = !showAreaForm)}
+					>+ Add area</button>
+				{/if}
+			</div>
+
+			{#if showAreaForm}
+				<form
+					class="area-add-form"
+					method="POST"
+					action="?/create_area"
+					use:enhance={() => {
+						creatingArea = true;
+						return async ({ update }) => {
+							await update();
+							creatingArea = false;
+						};
+					}}
+				>
+					{#if form?.action === 'create_area' && form.error}
+						<p class="area-error" role="alert">{form.error}</p>
+					{/if}
+					<div class="area-input-row">
+						<input
+							class="input"
+							type="text"
+							name="name"
+							placeholder="Area name"
+							list="area-suggestions"
+							autocomplete="off"
+							required
+							disabled={creatingArea}
+						/>
+						<datalist id="area-suggestions">
+							{#each data.areaTemplates as t (t.id)}
+								<option value={t.name}>{t.name}</option>
+							{/each}
+						</datalist>
+						<button class="btn btn-primary btn-sm" type="submit" disabled={creatingArea}>
+							{#if creatingArea}<span class="spinner"></span>{:else}Add{/if}
+						</button>
+					</div>
+				</form>
+			{/if}
+
+			{#if manageAreas && data.archivedAreas.length > 0}
+				<button
+					class="btn-text archived-toggle"
+					type="button"
+					onclick={() => (showArchivedAreas = !showArchivedAreas)}
+				>
+					{showArchivedAreas ? 'Hide' : 'Show'} archived ({data.archivedAreas.length})
+				</button>
+
+				{#if showArchivedAreas}
+					<div class="archived-list">
+						{#each data.archivedAreas as area (area.id)}
+							<div class="archived-row">
+								<span class="archived-name">{area.name}</span>
+								<div class="archived-actions">
+									<form method="POST" action="?/unarchive_area" use:enhance>
+										<input type="hidden" name="id" value={area.id} />
+										<button type="submit" class="btn-text">Restore</button>
+									</form>
+									<form method="POST" action="?/delete_area" use:enhance>
+										<input type="hidden" name="id" value={area.id} />
+										<button
+											type="submit"
+											class="btn-text btn-text-danger"
+											onclick={(e) => {
+												if (!confirm('Permanently delete this area? Items will not be deleted.')) e.preventDefault();
+											}}
+										>Delete</button>
+									</form>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			{/if}
+		</div>
+
 		<div class="section-header">
 			<h1 class="section-title">Issues</h1>
-			<button
-				class="btn btn-primary btn-sm"
-				onclick={() => (showForm = !showForm)}
-			>
+			<button class="btn btn-primary btn-sm" onclick={openIssueForm}>
 				{showForm ? 'Cancel' : '+ New issue'}
 			</button>
 		</div>
@@ -99,7 +249,7 @@
 			>
 				<h2 class="form-title">New issue</h2>
 
-				{#if form?.error}
+				{#if form?.action === 'create' && form.error}
 					<div class="error-banner" role="alert">{form.error}</div>
 				{/if}
 
@@ -116,6 +266,24 @@
 						disabled={creating}
 					/>
 				</div>
+
+				{#if data.areas.length > 0}
+					<div class="field">
+						<label class="label" for="area_id">Area</label>
+						<select
+							class="input"
+							id="area_id"
+							name="area_id"
+							bind:value={formAreaId}
+							disabled={creating}
+						>
+							<option value="">No area</option>
+							{#each data.areas as area (area.id)}
+								<option value={area.id}>{area.name}</option>
+							{/each}
+						</select>
+					</div>
+				{/if}
 
 				<div class="field">
 					<label class="label" for="description">Description</label>
@@ -145,7 +313,6 @@
 				<div class="field">
 					<span class="label">Problem photo <span aria-hidden="true">*</span></span>
 
-					<!-- Input stays in DOM so the file is always included in the form submission -->
 					<input
 						bind:this={photoInput}
 						type="file"
@@ -159,16 +326,9 @@
 					/>
 
 					{#if photoPreview}
-						<AnnotationCanvas
-							src={photoPreview}
-							onchange={(a) => (annotations = a)}
-						/>
+						<AnnotationCanvas src={photoPreview} onchange={(a) => (annotations = a)} />
 						<input type="hidden" name="annotations" value={JSON.stringify(annotations)} />
-						<button
-							type="button"
-							class="photo-clear-text"
-							onclick={clearPhoto}
-						>Remove photo</button>
+						<button type="button" class="photo-clear-text" onclick={clearPhoto}>Remove photo</button>
 					{:else}
 						<label class="photo-picker" for="photo">
 							<span class="photo-picker-icon" aria-hidden="true">📷</span>
@@ -188,8 +348,8 @@
 			<div class="filter-bar">
 				<button
 					class="filter-btn"
-					class:active={activeFilter === 'all'}
-					onclick={() => (activeFilter = 'all')}
+					class:active={activeStatus === 'all'}
+					onclick={() => (activeStatus = 'all')}
 				>
 					All <span class="filter-count">{data.items.length}</span>
 				</button>
@@ -197,8 +357,8 @@
 					{#if counts()[status]}
 						<button
 							class="filter-btn filter-btn-{status}"
-							class:active={activeFilter === status}
-							onclick={() => (activeFilter = status)}
+							class:active={activeStatus === status}
+							onclick={() => (activeStatus = status)}
 						>
 							{STATUS_LABEL[status]}
 							<span class="filter-count">{counts()[status]}</span>
@@ -215,7 +375,7 @@
 			</div>
 		{:else if filteredItems().length === 0}
 			<div class="empty">
-				<p>No issues with this status.</p>
+				<p>No issues with this filter.</p>
 			</div>
 		{:else}
 			<ul class="item-list">
@@ -224,9 +384,16 @@
 						<a class="item-link" href="/item/{item.share_token}">
 							<div class="item-info">
 								<span class="item-title">{item.title}</span>
-								{#if item.assigned_to}
-									<span class="item-assignee text-sm text-secondary">→ {item.assigned_to}</span>
-								{/if}
+								<div class="item-meta">
+									{#if item.area_id && areaMap().get(item.area_id)}
+										<span class="item-area text-sm text-secondary">
+											{areaMap().get(item.area_id)}
+										</span>
+									{/if}
+									{#if item.assigned_to}
+										<span class="item-assignee text-sm text-secondary">→ {item.assigned_to}</span>
+									{/if}
+								</div>
 							</div>
 							<span class={STATUS_BADGE_CLASS[item.status as PunchStatus]}>
 								{STATUS_LABEL[item.status as PunchStatus]}
@@ -306,6 +473,154 @@
 		margin-bottom: var(--space-4);
 	}
 
+	/* Areas section */
+	.areas-section {
+		margin-bottom: var(--space-5);
+	}
+
+	.areas-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: var(--space-2);
+	}
+
+	.areas-label {
+		font-size: var(--text-sm);
+		font-weight: var(--weight-semibold);
+		color: var(--color-text-secondary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.btn-text {
+		background: none;
+		border: none;
+		padding: 0;
+		font-size: var(--text-sm);
+		color: var(--color-brand-dark);
+		font-weight: var(--weight-medium);
+		cursor: pointer;
+	}
+
+	.btn-text-danger {
+		color: var(--color-open-fg);
+	}
+
+	.areas-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2);
+	}
+
+	.area-chip {
+		display: inline-flex;
+		align-items: center;
+		padding: var(--space-1) var(--space-3);
+		min-height: 2rem;
+		border: 1px solid var(--color-border-strong);
+		border-radius: var(--radius-full);
+		background: var(--color-surface);
+		color: var(--color-text-secondary);
+		font-size: var(--text-sm);
+		font-weight: var(--weight-medium);
+		cursor: pointer;
+		transition: all var(--transition-fast);
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.area-chip.active {
+		border-color: var(--color-brand);
+		background: var(--color-brand-light, #fef3c7);
+		color: var(--color-text);
+	}
+
+	.area-chip-add {
+		border-style: dashed;
+	}
+
+	.area-chip-manage {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1);
+		padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
+		border: 1px solid var(--color-border-strong);
+		border-radius: var(--radius-full);
+		background: var(--color-surface);
+		font-size: var(--text-sm);
+	}
+
+	.area-chip-name {
+		font-weight: var(--weight-medium);
+	}
+
+	.area-archive-btn {
+		background: none;
+		border: none;
+		padding: 2px var(--space-1);
+		font-size: var(--text-xs);
+		color: var(--color-text-muted);
+		cursor: pointer;
+		border-radius: var(--radius-sm);
+		transition: color var(--transition-fast);
+	}
+
+	.area-archive-btn:hover {
+		color: var(--color-open-fg);
+	}
+
+	.area-add-form {
+		margin-top: var(--space-3);
+	}
+
+	.area-input-row {
+		display: flex;
+		gap: var(--space-2);
+	}
+
+	.area-input-row .input {
+		flex: 1;
+	}
+
+	.area-error {
+		font-size: var(--text-sm);
+		color: var(--color-open-fg);
+		margin-bottom: var(--space-2);
+	}
+
+	.archived-toggle {
+		margin-top: var(--space-3);
+		display: block;
+	}
+
+	.archived-list {
+		margin-top: var(--space-2);
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+
+	.archived-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: var(--space-2) var(--space-3);
+		border-radius: var(--radius-md);
+		background: var(--color-bg);
+		border: 1px solid var(--color-border);
+	}
+
+	.archived-name {
+		font-size: var(--text-sm);
+		color: var(--color-text-secondary);
+	}
+
+	.archived-actions {
+		display: flex;
+		gap: var(--space-3);
+	}
+
+	/* Section header */
 	.section-header {
 		display: flex;
 		align-items: center;
@@ -318,6 +633,7 @@
 		font-weight: var(--weight-bold);
 	}
 
+	/* New issue form */
 	.new-item-form {
 		display: flex;
 		flex-direction: column;
@@ -370,20 +686,6 @@
 
 	.photo-picker-icon {
 		font-size: var(--text-3xl);
-	}
-
-	.photo-preview-wrap {
-		position: relative;
-		border-radius: var(--radius-lg);
-		overflow: hidden;
-	}
-
-	.photo-preview {
-		width: 100%;
-		max-height: 240px;
-		object-fit: cover;
-		border-radius: var(--radius-lg);
-		display: block;
 	}
 
 	.photo-clear-text {
@@ -458,10 +760,22 @@
 		text-overflow: ellipsis;
 	}
 
+	.item-meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2);
+	}
+
+	.item-area,
 	.item-assignee {
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	.item-area::before {
+		content: '📍 ';
+		font-style: normal;
 	}
 
 	/* Filter bar */

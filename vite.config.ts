@@ -9,6 +9,7 @@ export default defineConfig({
 		VitePWA({
 			registerType: 'autoUpdate',
 			injectRegister: null,
+			devOptions: { enabled: true },
 			manifest: {
 				name: 'Splunch',
 				short_name: 'Splunch',
@@ -28,7 +29,29 @@ export default defineConfig({
 			},
 			workbox: {
 				globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-				navigateFallback: null
+				navigateFallback: null,
+				runtimeCaching: [
+					{
+						urlPattern: ({ url }) =>
+							url.origin.includes('supabase') && url.pathname.startsWith('/rest/v1/'),
+						handler: 'NetworkFirst',
+						options: {
+							cacheName: 'supabase-rest',
+							networkTimeoutSeconds: 5,
+							expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 }
+						}
+					},
+					{
+						urlPattern: ({ url }) =>
+							url.origin.includes('supabase') &&
+							url.pathname.startsWith('/storage/v1/object/public/'),
+						handler: 'CacheFirst',
+						options: {
+							cacheName: 'supabase-photos',
+							expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 }
+						}
+					}
+				]
 			}
 		})
 	],
