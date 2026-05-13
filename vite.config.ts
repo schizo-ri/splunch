@@ -9,7 +9,6 @@ export default defineConfig({
 		VitePWA({
 			registerType: 'autoUpdate',
 			injectRegister: null,
-			inlineWorkboxRuntime: true,
 			devOptions: { enabled: true },
 			manifest: {
 				name: 'Splunch',
@@ -30,7 +29,8 @@ export default defineConfig({
 			},
 			workbox: {
 				globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-				navigateFallback: null,
+				navigateFallback: '/offline',
+				inlineWorkboxRuntime: true,
 				runtimeCaching: [
 					{
 						urlPattern: ({ request }) => request.mode === 'navigate',
