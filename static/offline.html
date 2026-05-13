@@ -43,10 +43,31 @@
 </head>
 <body>
   <div class="card">
-    <div class="icon">📵</div>
-    <h1>You're offline</h1>
+    <div class="icon" id="icon">📵</div>
+    <h1 id="title">You're offline</h1>
     <p>This page hasn't been cached yet. Open it while online and it will be available offline next time.</p>
-    <button onclick="location.reload()">Try again</button>
+    <button onclick="tryAgain()">Try again</button>
   </div>
+  <script>
+    function navigate() {
+      if (location.pathname === '/offline.html') {
+        history.back();
+      } else {
+        location.reload();
+      }
+    }
+
+    function tryAgain() {
+      if (navigator.onLine) {
+        navigate();
+      }
+    }
+
+    window.addEventListener('online', () => {
+      document.getElementById('icon').textContent = '✅';
+      document.getElementById('title').textContent = 'Back online';
+      setTimeout(navigate, 800);
+    });
+  </script>
 </body>
 </html>

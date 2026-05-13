@@ -37,7 +37,8 @@ export default defineConfig({
 						options: {
 							cacheName: 'pages',
 							networkTimeoutSeconds: 3,
-							expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 }
+							expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 },
+							cacheableResponse: { statuses: [0, 200] }
 						}
 					},
 					{
