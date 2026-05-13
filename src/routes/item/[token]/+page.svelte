@@ -41,6 +41,8 @@
 	onMount(async () => {
 		workerName = localStorage.getItem('splunch_worker_name') ?? '';
 		pendingCount = await getPendingCount();
+		window.addEventListener('online', handleSync);
+		return () => window.removeEventListener('online', handleSync);
 	});
 
 	function saveWorkerName() {
