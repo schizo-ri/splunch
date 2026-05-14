@@ -61,7 +61,7 @@
 					}
 				}
 			)
-			.subscribe((status, err) => console.log('[Realtime comments]', status, err));
+			.subscribe();
 
 		return () => {
 			window.removeEventListener('online', handleSync);
