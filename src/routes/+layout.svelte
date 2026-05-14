@@ -1,23 +1,28 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, setContext } from 'svelte';
 	import { invalidate } from '$app/navigation';
 	import favicon from '$lib/assets/favicon.svg';
 	import '../app.css';
 	import { syncQueue } from '$lib/offline-queue';
-	import NotificationBell from '$lib/components/NotificationBell.svelte';
-	import type { Notification } from '$lib/types/database';
+	import type { NotifItem, NotifContext } from '$lib/types/notifications';
 
 	let { data, children } = $props();
 	let { supabase, session } = $derived(data);
 
 	let isOnline = $state(true);
-	let extraNotifications = $state<Notification[]>([]);
+	let extraNotifications = $state<NotifItem[]>([]);
 
 	const allNotifications = $derived.by(() => {
 		const base = data.notifications ?? [];
 		const baseIds = new Set(base.map((n) => n.id));
 		const prepend = extraNotifications.filter((n) => !baseIds.has(n.id));
 		return [...prepend, ...base];
+	});
+
+	setContext<NotifContext>('notif', {
+		get notifications() { return allNotifications; },
+		get supabase() { return supabase; },
+		get user() { return data.user; }
 	});
 
 	onMount(() => {
@@ -57,7 +62,7 @@
 						filter: `user_id=eq.${data.user.id}`
 					},
 					(payload) => {
-						const n = payload.new as Notification;
+						const n = payload.new as NotifItem;
 						if (!extraNotifications.find((x) => x.id === n.id)) {
 							extraNotifications = [n, ...extraNotifications];
 						}
@@ -83,12 +88,6 @@
 	<div class="offline-bar" role="status" aria-live="polite">Offline — showing cached data</div>
 {/if}
 
-{#if data.user}
-	<div class="notif-wrapper">
-		<NotificationBell notifications={allNotifications} {supabase} />
-	</div>
-{/if}
-
 {@render children()}
 
 <style>
@@ -107,10 +106,4 @@
 		padding-bottom: calc(0.375rem + env(safe-area-inset-bottom));
 	}
 
-	.notif-wrapper {
-		position: fixed;
-		top: calc(env(safe-area-inset-top, 0px) + 0.625rem);
-		right: 1rem;
-		z-index: 50;
-	}
 </style>

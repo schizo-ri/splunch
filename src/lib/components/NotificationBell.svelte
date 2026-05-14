@@ -10,10 +10,8 @@
 		item_token: string | null;
 	};
 
-	let {
-		notifications,
-		supabase
-	}: { notifications: Notif[]; supabase: SupabaseClient<Database> } = $props();
+	let { notifications, supabase }: { notifications: Notif[]; supabase: SupabaseClient<Database> } =
+		$props();
 
 	let open = $state(false);
 	let localReadIds = $state(new Set<string>());
@@ -131,7 +129,6 @@
 	.bell-btn img {
 		width: 1.25rem;
 		height: 1.25rem;
-		opacity: 0.7;
 	}
 
 	.badge {

@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
+	import Topbar from '$lib/components/Topbar.svelte';
 	import { STATUS_LABEL, STATUS_BADGE_CLASS } from '$lib/status';
 	import ShareButton from '$lib/components/ShareButton.svelte';
 	import AnnotationView from '$lib/components/AnnotationView.svelte';
@@ -112,17 +113,12 @@
 </svelte:head>
 
 <div class="layout">
-	<header class="topbar safe-top">
-		<div class="topbar-inner">
-			{#if isMember}
-				<a class="back-btn" href="/project/{item.project_id}">‹ Back</a>
-			{:else}
-				<span class="topbar-logo">Splunch</span>
-			{/if}
-			<span class={STATUS_BADGE_CLASS[status]}>{STATUS_LABEL[status]}</span>
+	<Topbar back={isMember ? { href: `/project/${item.project_id}`, label: 'Back' } : undefined} logo={!isMember}>
+		<span class={STATUS_BADGE_CLASS[status]}>{STATUS_LABEL[status]}</span>
+		{#snippet right()}
 			<ShareButton url={page.url.href} title={item.title} iconOnly class="topbar-share" />
-		</div>
-	</header>
+		{/snippet}
+	</Topbar>
 
 	<main class="main">
 		<!-- Problem photo -->
@@ -603,45 +599,6 @@
 		background: var(--color-bg);
 	}
 
-	.topbar {
-		background: var(--color-surface);
-		border-bottom: 1px solid var(--color-border);
-		position: sticky;
-		top: 0;
-		z-index: 10;
-	}
-
-	.topbar-inner {
-		max-width: 640px;
-		margin-inline: auto;
-		padding-inline: var(--space-4);
-		padding-block: var(--space-3);
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	:global(.topbar-share) {
-		border: none !important;
-		background: transparent !important;
-		color: var(--color-text-secondary) !important;
-	}
-
-	:global(.topbar-share:hover) {
-		background: var(--color-bg) !important;
-		color: var(--color-text) !important;
-	}
-
-	.back-btn {
-		font-size: var(--text-sm);
-		color: var(--color-brand-dark);
-		font-weight: var(--weight-medium);
-	}
-
-	.topbar-logo {
-		font-size: var(--text-lg);
-		font-weight: var(--weight-bold);
-	}
 
 	.main {
 		flex: 1;

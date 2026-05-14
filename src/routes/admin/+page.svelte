@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import Topbar from '$lib/components/Topbar.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -18,13 +19,9 @@
 </svelte:head>
 
 <div class="layout">
-	<header class="topbar safe-top">
-		<div class="topbar-inner">
-			<a class="back-btn" href="/dashboard">‹ Dashboard</a>
-			<span class="topbar-title">Admin</span>
-			<div style="width: 6rem"></div>
-		</div>
-	</header>
+	<Topbar back={{ href: '/dashboard', label: 'Dashboard' }}>
+		<span class="topbar-title">Admin</span>
+	</Topbar>
 
 	<main class="main container">
 		<div class="section-header">
@@ -149,31 +146,6 @@
 		min-height: 100dvh;
 		display: flex;
 		flex-direction: column;
-	}
-
-	.topbar {
-		background: var(--color-surface);
-		border-bottom: 1px solid var(--color-border);
-		position: sticky;
-		top: 0;
-		z-index: 10;
-	}
-
-	.topbar-inner {
-		max-width: 640px;
-		margin-inline: auto;
-		padding-inline: var(--space-4);
-		padding-block: var(--space-3);
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.back-btn {
-		font-size: var(--text-sm);
-		color: var(--color-brand-dark);
-		font-weight: var(--weight-medium);
-		min-width: 6rem;
 	}
 
 	.topbar-title {

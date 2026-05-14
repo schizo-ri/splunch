@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
+	import Topbar from '$lib/components/Topbar.svelte';
 	import { STATUS_LABEL, STATUS_BADGE_CLASS } from '$lib/status';
 	import ShareButton from '$lib/components/ShareButton.svelte';
 	import AnnotationCanvas from '$lib/components/AnnotationCanvas.svelte';
@@ -105,15 +106,9 @@
 </svelte:head>
 
 <div class="layout">
-	<header class="topbar safe-top">
-		<div class="topbar-inner">
-			<a class="back-btn" href="/dashboard">
-				<span aria-hidden="true">‹</span> Projects
-			</a>
-			<span class="topbar-title">{data.project.name}</span>
-			<div style="width: 5rem"></div>
-		</div>
-	</header>
+	<Topbar back={{ href: '/dashboard', label: 'Projects' }}>
+		<span class="topbar-title">{data.project.name}</span>
+	</Topbar>
 
 	<main class="main container">
 		{#if data.project.address}
@@ -444,41 +439,13 @@
 		flex-direction: column;
 	}
 
-	.topbar {
-		background: var(--color-surface);
-		border-bottom: 1px solid var(--color-border);
-		position: sticky;
-		top: 0;
-		z-index: 10;
-	}
-
-	.topbar-inner {
-		max-width: 640px;
-		margin-inline: auto;
-		padding-inline: var(--space-4);
-		padding-block: var(--space-3);
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.back-btn {
-		display: flex;
-		align-items: center;
-		gap: var(--space-1);
-		font-size: var(--text-sm);
-		color: var(--color-brand-dark);
-		font-weight: var(--weight-medium);
-		min-width: 5rem;
-	}
-
 	.topbar-title {
 		font-size: var(--text-base);
 		font-weight: var(--weight-semibold);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		max-width: 45%;
+		max-width: 100%;
 		text-align: center;
 	}
 

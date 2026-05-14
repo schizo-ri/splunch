@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import Topbar from '$lib/components/Topbar.svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -17,19 +18,16 @@
 </svelte:head>
 
 <div class="layout">
-	<header class="topbar safe-top">
-		<div class="topbar-inner">
-			<span class="topbar-logo">Splunch</span>
-			<div class="topbar-right">
-				{#if data.isSuperadmin}
-					<a class="btn btn-ghost btn-sm" href="/admin">Admin</a>
-				{/if}
-				<form method="POST" action="/logout">
-					<button class="btn btn-ghost btn-sm" type="submit">Log out</button>
-				</form>
-			</div>
-		</div>
-	</header>
+	<Topbar logo>
+		{#snippet right()}
+			{#if data.isSuperadmin}
+				<a class="btn btn-ghost btn-sm" href="/admin">Admin</a>
+			{/if}
+			<form method="POST" action="/logout">
+				<button class="btn btn-ghost btn-sm" type="submit">Log out</button>
+			</form>
+		{/snippet}
+	</Topbar>
 
 	<main class="main container">
 		<div class="section-header">
@@ -130,36 +128,6 @@
 		min-height: 100dvh;
 		display: flex;
 		flex-direction: column;
-	}
-
-	.topbar {
-		background: var(--color-surface);
-		border-bottom: 1px solid var(--color-border);
-		position: sticky;
-		top: 0;
-		z-index: 10;
-	}
-
-	.topbar-inner {
-		max-width: 640px;
-		margin-inline: auto;
-		padding-inline: var(--space-4);
-		padding-block: var(--space-3);
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.topbar-logo {
-		font-size: var(--text-lg);
-		font-weight: var(--weight-bold);
-		letter-spacing: -0.02em;
-	}
-
-	.topbar-right {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
 	}
 
 	.btn-sm {
