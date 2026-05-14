@@ -73,10 +73,13 @@
 	}
 
 	async function handleResolveOffline(workerNameVal: string, noteVal: string | null) {
-		await enqueueResolve(item.share_token, workerNameVal, noteVal, resolveBlob);
-		pendingCount = await getPendingCount();
-		offlineQueued = true;
-		resolving = false;
+		try {
+			await enqueueResolve(item.share_token, workerNameVal, noteVal, resolveBlob);
+			pendingCount = await getPendingCount();
+			offlineQueued = true;
+		} finally {
+			resolving = false;
+		}
 	}
 
 </script>
@@ -427,16 +430,21 @@
 								method="POST"
 								action="?/close"
 								use:enhance={({ cancel, formData }) => {
+									closing = true;
 									if (!navigator.onLine) {
 										cancel();
 										const note = (formData.get('note') as string)?.trim() || null;
-										enqueueClose(item.share_token, note).then(async () => {
-											pendingCount = await getPendingCount();
-											closeQueued = true;
-										});
+										enqueueClose(item.share_token, note)
+											.then(async () => {
+												pendingCount = await getPendingCount();
+												closeQueued = true;
+											})
+											.catch(() => {})
+											.finally(() => {
+												closing = false;
+											});
 										return;
 									}
-									closing = true;
 									return async ({ update }) => {
 										await update();
 										closing = false;
@@ -480,17 +488,25 @@
 									method="POST"
 									action="?/reopen"
 									use:enhance={({ cancel, formData }) => {
+										reopening = true;
 										if (!navigator.onLine) {
 											cancel();
 											const note = (formData.get('note') as string)?.trim();
-											if (!note) return;
-											enqueueReopen(item.share_token, note).then(async () => {
-												pendingCount = await getPendingCount();
-												reopenQueued = true;
-											});
+											if (!note) {
+												reopening = false;
+												return;
+											}
+											enqueueReopen(item.share_token, note)
+												.then(async () => {
+													pendingCount = await getPendingCount();
+													reopenQueued = true;
+												})
+												.catch(() => {})
+												.finally(() => {
+													reopening = false;
+												});
 											return;
 										}
-										reopening = true;
 										return async ({ update }) => {
 											await update();
 											reopening = false;

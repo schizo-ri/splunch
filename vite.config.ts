@@ -29,7 +29,7 @@ export default defineConfig({
 			},
 			workbox: {
 				globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-				navigateFallback: '/offline.html',
+				navigateFallback: null,
 				runtimeCaching: [
 					{
 						urlPattern: ({ request }) => request.mode === 'navigate',

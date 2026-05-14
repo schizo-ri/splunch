@@ -4,62 +4,66 @@ import type { Actions } from './$types'
 
 export const actions: Actions = {
 	resolve: async ({ request, params }) => {
-		const data = await request.formData()
-		const workerName = (data.get('worker_name') as string)?.trim()
-		const note = (data.get('note') as string)?.trim() || null
-		const photo = data.get('photo') as File | null
+		try {
+			const data = await request.formData()
+			const workerName = (data.get('worker_name') as string)?.trim()
+			const note = (data.get('note') as string)?.trim() || null
+			const photo = data.get('photo') as File | null
 
-		if (!workerName) return fail(400, { action: 'resolve', error: 'Enter your name.' })
+			if (!workerName) return fail(400, { action: 'resolve', error: 'Enter your name.' })
 
-		const { data: item } = await supabaseAdmin
-			.from('punch_items')
-			.select('id, status')
-			.eq('share_token', params.token)
-			.single()
+			const { data: item } = await supabaseAdmin
+				.from('punch_items')
+				.select('id, status')
+				.eq('share_token', params.token)
+				.single()
 
-		if (!item) return fail(404, { action: 'resolve', error: 'Item not found.' })
-		if (!['open', 'reopened'].includes(item.status)) {
-			return fail(400, { action: 'resolve', error: 'Item is not open for repair.' })
+			if (!item) return fail(404, { action: 'resolve', error: 'Item not found.' })
+			if (!['open', 'reopened'].includes(item.status)) {
+				return fail(400, { action: 'resolve', error: 'Item is not open for repair.' })
+			}
+
+			const inserts: PromiseLike<unknown>[] = [
+				supabaseAdmin.from('punch_items').update({ status: 'resolved' }).eq('id', item.id)
+			]
+
+			if (photo && photo.size > 0) {
+				const ext = photo.name.split('.').pop()?.toLowerCase() ?? 'webp'
+				const storagePath = `${item.id}/solution_${Date.now()}.${ext}`
+				const buffer = await photo.arrayBuffer()
+
+				const { error: uploadError } = await supabaseAdmin.storage
+					.from('punch-photos')
+					.upload(storagePath, buffer, { contentType: photo.type, upsert: false })
+
+				if (uploadError) return fail(500, { action: 'resolve', error: 'Error uploading photo.' })
+
+				inserts.push(
+					supabaseAdmin.from('photos').insert({
+						punch_item_id: item.id,
+						type: 'solution',
+						storage_path: storagePath,
+						created_by_name: workerName
+					})
+				)
+			}
+
+			if (note) {
+				inserts.push(
+					supabaseAdmin.from('comments').insert({
+						punch_item_id: item.id,
+						body: note,
+						author_name: workerName
+					})
+				)
+			}
+
+			await Promise.all(inserts)
+
+			return { resolveSuccess: true }
+		} catch {
+			return fail(500, { action: 'resolve', error: 'Something went wrong. Please try again.' })
 		}
-
-		const inserts: PromiseLike<unknown>[] = [
-			supabaseAdmin.from('punch_items').update({ status: 'resolved' }).eq('id', item.id)
-		]
-
-		if (photo && photo.size > 0) {
-			const ext = photo.name.split('.').pop()?.toLowerCase() ?? 'webp'
-			const storagePath = `${item.id}/solution_${Date.now()}.${ext}`
-			const buffer = await photo.arrayBuffer()
-
-			const { error: uploadError } = await supabaseAdmin.storage
-				.from('punch-photos')
-				.upload(storagePath, buffer, { contentType: photo.type, upsert: false })
-
-			if (uploadError) return fail(500, { action: 'resolve', error: 'Error uploading photo.' })
-
-			inserts.push(
-				supabaseAdmin.from('photos').insert({
-					punch_item_id: item.id,
-					type: 'solution',
-					storage_path: storagePath,
-					created_by_name: workerName
-				})
-			)
-		}
-
-		if (note) {
-			inserts.push(
-				supabaseAdmin.from('comments').insert({
-					punch_item_id: item.id,
-					body: note,
-					author_name: workerName
-				})
-			)
-		}
-
-		await Promise.all(inserts)
-
-		return { resolveSuccess: true }
 	},
 
 	close: async ({ request, params, locals: { safeGetSession } }) => {
