@@ -48,7 +48,8 @@ export default defineConfig({
 						options: {
 							cacheName: 'supabase-rest',
 							networkTimeoutSeconds: 5,
-							expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 }
+							expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 },
+							cacheableResponse: { statuses: [0, 200] }
 						}
 					},
 					{
@@ -58,7 +59,8 @@ export default defineConfig({
 						handler: 'CacheFirst',
 						options: {
 							cacheName: 'supabase-photos',
-							expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 }
+							expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 },
+							cacheableResponse: { statuses: [0, 200] }
 						}
 					}
 				]

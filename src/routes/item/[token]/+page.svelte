@@ -38,9 +38,9 @@
 	let syncing = $state(false);
 	let offlineQueued = $state(false);
 
-	onMount(async () => {
+	onMount(() => {
 		workerName = localStorage.getItem('splunch_worker_name') ?? '';
-		pendingCount = await getPendingCount();
+		getPendingCount().then((n) => (pendingCount = n));
 		window.addEventListener('online', handleSync);
 		return () => window.removeEventListener('online', handleSync);
 	});

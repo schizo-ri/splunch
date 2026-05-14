@@ -24,9 +24,15 @@ export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 		data: { session }
 	} = await supabase.auth.getSession()
 
-	const {
-		data: { user }
-	} = await supabase.auth.getUser()
+	// getUser() validates the JWT with the Supabase server — fails when offline.
+	// Fall back to session.user so cached pages remain functional without network.
+	let user = session?.user ?? null
+	try {
+		const { data } = await supabase.auth.getUser()
+		user = data.user ?? user
+	} catch {
+		// offline or auth service unreachable — keep session user
+	}
 
 	return { session, user, supabase }
 }
