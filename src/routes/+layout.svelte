@@ -4,7 +4,6 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import '../app.css';
 	import { syncQueue } from '$lib/offline-queue';
-	import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
 
 	let { data, children } = $props();
 	let { supabase, session } = $derived(data);
@@ -26,7 +25,7 @@
 
 		async function handleOnline() {
 			isOnline = true;
-			await syncQueue(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+			await syncQueue();
 		}
 
 		function handleOffline() {

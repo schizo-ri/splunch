@@ -6,10 +6,9 @@
 	import ShareButton from '$lib/components/ShareButton.svelte';
 	import AnnotationView from '$lib/components/AnnotationView.svelte';
 	import { compressImage } from '$lib/compress';
-	import { enqueueResolve, getPendingCount, syncQueue } from '$lib/offline-queue';
+	import { enqueueResolve, enqueueClose, enqueueReopen, getPendingCount, syncQueue } from '$lib/offline-queue';
 	import type { PunchStatus } from '$lib/types/database';
 	import type { ActionData, PageData } from './$types';
-	import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -37,6 +36,8 @@
 	let pendingCount = $state(0);
 	let syncing = $state(false);
 	let offlineQueued = $state(false);
+	let closeQueued = $state(false);
+	let reopenQueued = $state(false);
 
 	onMount(() => {
 		workerName = localStorage.getItem('splunch_worker_name') ?? '';
@@ -65,7 +66,7 @@
 
 	async function handleSync() {
 		syncing = true;
-		await syncQueue(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+		await syncQueue();
 		pendingCount = await getPendingCount();
 		syncing = false;
 		if (pendingCount === 0) location.reload();
@@ -413,90 +414,124 @@
 				<div class="action-block card">
 					<h2 class="section-label">Review solution</h2>
 
-					<div class="owner-actions">
-						<form
-							method="POST"
-							action="?/close"
-							use:enhance={() => {
-								closing = true;
-								return async ({ update }) => {
-									await update();
-									closing = false;
-								};
-							}}
-						>
-							<div class="field">
-								<label class="label" for="close-note">Comment (optional)</label>
-								<input
-									class="input"
-									type="text"
-									id="close-note"
-									name="note"
-									placeholder="Looks good."
-									disabled={closing}
-								/>
-							</div>
-							<button
-								class="btn btn-primary btn-full"
-								type="submit"
-								disabled={closing || reopening}
-							>
-								{#if closing}<span class="spinner"></span>{/if}
-								Close — accept solution
+					{#if closeQueued || reopenQueued}
+						<div class="offline-banner" role="status">
+							<span>{closeQueued ? 'Close' : 'Return'} queued — will sync when back online.</span>
+							<button class="btn btn-sm btn-secondary" onclick={handleSync} disabled={syncing}>
+								{#if syncing}<span class="spinner spinner-sm"></span>{:else}Sync now{/if}
 							</button>
-						</form>
-
-						{#if !showReopenForm}
-							<button
-								class="btn btn-secondary btn-full"
-								onclick={() => (_showReopenForm = true)}
-								disabled={closing}
-							>
-								Return for repair
-							</button>
-						{:else}
+						</div>
+					{:else}
+						<div class="owner-actions">
 							<form
 								method="POST"
-								action="?/reopen"
-								use:enhance={() => {
-									reopening = true;
+								action="?/close"
+								use:enhance={({ cancel, formData }) => {
+									if (!navigator.onLine) {
+										cancel();
+										const note = (formData.get('note') as string)?.trim() || null;
+										enqueueClose(item.share_token, note).then(async () => {
+											pendingCount = await getPendingCount();
+											closeQueued = true;
+										});
+										return;
+									}
+									closing = true;
 									return async ({ update }) => {
 										await update();
-										reopening = false;
+										closing = false;
 									};
 								}}
 							>
+								{#if form?.action === 'close' && form.error}
+									<div class="error-banner" role="alert">{form.error}</div>
+								{/if}
 								<div class="field">
-									<label class="label" for="reopen-note"
-										>Reason for return <span aria-hidden="true">*</span></label
-									>
-									<textarea
-										class="textarea"
-										id="reopen-note"
+									<label class="label" for="close-note">Comment (optional)</label>
+									<input
+										class="input"
+										type="text"
+										id="close-note"
 										name="note"
-										placeholder="What needs to be fixed?"
-										rows="2"
-										required
-										disabled={reopening}
-									></textarea>
+										placeholder="Looks good."
+										disabled={closing}
+									/>
 								</div>
-								<div class="row-buttons">
-									<button
-										class="btn btn-ghost"
-										type="button"
-										onclick={() => (_showReopenForm = false)}
-										disabled={reopening}
-									>
-										Cancel
-									</button>
-									<button class="btn btn-danger" type="submit" disabled={reopening || closing}>
-										{#if reopening}<span class="spinner"></span>{/if}
-										Return for repair
-									</button>
-								</div>
+								<button
+									class="btn btn-primary btn-full"
+									type="submit"
+									disabled={closing || reopening}
+								>
+									{#if closing}<span class="spinner"></span>{/if}
+									Close — accept solution
+								</button>
 							</form>
-						{/if}
-					</div>
+
+							{#if !showReopenForm}
+								<button
+									class="btn btn-secondary btn-full"
+									onclick={() => (_showReopenForm = true)}
+									disabled={closing}
+								>
+									Return for repair
+								</button>
+							{:else}
+								<form
+									method="POST"
+									action="?/reopen"
+									use:enhance={({ cancel, formData }) => {
+										if (!navigator.onLine) {
+											cancel();
+											const note = (formData.get('note') as string)?.trim();
+											if (!note) return;
+											enqueueReopen(item.share_token, note).then(async () => {
+												pendingCount = await getPendingCount();
+												reopenQueued = true;
+											});
+											return;
+										}
+										reopening = true;
+										return async ({ update }) => {
+											await update();
+											reopening = false;
+										};
+									}}
+								>
+									{#if form?.action === 'reopen' && form.error}
+										<div class="error-banner" role="alert">{form.error}</div>
+									{/if}
+									<div class="field">
+										<label class="label" for="reopen-note"
+											>Reason for return <span aria-hidden="true">*</span></label
+										>
+										<textarea
+											class="textarea"
+											id="reopen-note"
+											name="note"
+											placeholder="What needs to be fixed?"
+											rows="2"
+											required
+											disabled={reopening}
+										></textarea>
+									</div>
+									<div class="row-buttons">
+										<button
+											class="btn btn-ghost"
+											type="button"
+											onclick={() => (_showReopenForm = false)}
+											disabled={reopening}
+										>
+											Cancel
+										</button>
+										<button class="btn btn-danger" type="submit" disabled={reopening || closing}>
+											{#if reopening}<span class="spinner"></span>{/if}
+											Return for repair
+										</button>
+									</div>
+								</form>
+							{/if}
+						</div>
+					{/if}
 				</div>
 			{/if}
 

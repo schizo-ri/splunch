@@ -4,30 +4,51 @@ const CACHE_NAME = 'splunch-photos-v1'
 const CACHE_SIZE_LIMIT = 5 * 1024 * 1024 // 5 MB
 
 interface QueuedResolve {
-	id: string // crypto.randomUUID()
+	id: string
 	token: string
 	workerName: string
 	note: string | null
-	photoBlob: Blob | null // null if stored in Cache Storage
-	photoCacheKey: string | null // set when blob went to Cache Storage
+	photoBlob: Blob | null
+	photoCacheKey: string | null
+	createdAt: number
+	syncAttempts: number
+}
+
+interface QueuedClose {
+	id: string
+	token: string
+	note: string | null
+	createdAt: number
+	syncAttempts: number
+}
+
+interface QueuedReopen {
+	id: string
+	token: string
+	note: string
 	createdAt: number
 	syncAttempts: number
 }
 
 interface SplunchDB extends DBSchema {
-	resolve_queue: {
-		key: string
-		value: QueuedResolve
-	}
+	resolve_queue: { key: string; value: QueuedResolve }
+	close_queue: { key: string; value: QueuedClose }
+	reopen_queue: { key: string; value: QueuedReopen }
 }
 
 let _db: IDBPDatabase<SplunchDB> | null = null
 
 async function getDB() {
 	if (!_db) {
-		_db = await openDB<SplunchDB>('splunch', 1, {
-			upgrade(db) {
-				db.createObjectStore('resolve_queue', { keyPath: 'id' })
+		_db = await openDB<SplunchDB>('splunch', 2, {
+			upgrade(db, oldVersion) {
+				if (oldVersion < 1) {
+					db.createObjectStore('resolve_queue', { keyPath: 'id' })
+				}
+				if (oldVersion < 2) {
+					db.createObjectStore('close_queue', { keyPath: 'id' })
+					db.createObjectStore('reopen_queue', { keyPath: 'id' })
+				}
 			}
 		})
 	}
@@ -66,24 +87,38 @@ export async function enqueueResolve(
 	return id
 }
 
+export async function enqueueClose(token: string, note: string | null) {
+	const db = await getDB()
+	const id = crypto.randomUUID()
+	await db.add('close_queue', { id, token, note, createdAt: Date.now(), syncAttempts: 0 })
+	return id
+}
+
+export async function enqueueReopen(token: string, note: string) {
+	const db = await getDB()
+	const id = crypto.randomUUID()
+	await db.add('reopen_queue', { id, token, note, createdAt: Date.now(), syncAttempts: 0 })
+	return id
+}
+
 export async function getPendingCount(): Promise<number> {
 	const db = await getDB()
-	return db.count('resolve_queue')
+	const [r, c, re] = await Promise.all([
+		db.count('resolve_queue'),
+		db.count('close_queue'),
+		db.count('reopen_queue')
+	])
+	return r + c + re
 }
 
-export async function getPending(): Promise<QueuedResolve[]> {
+export async function syncQueue() {
 	const db = await getDB()
-	return db.getAll('resolve_queue')
-}
-
-export async function syncQueue(supabaseUrl: string, supabaseAnonKey: string) {
-	const pending = await getPending()
-	if (pending.length === 0) return { synced: 0, failed: 0 }
-
 	let synced = 0
 	let failed = 0
 
-	for (const entry of pending) {
+	// sync resolve queue
+	const resolves = await db.getAll('resolve_queue')
+	for (const entry of resolves) {
 		try {
 			const blob = await resolveBlob(entry)
 			const fd = new FormData()
@@ -91,20 +126,62 @@ export async function syncQueue(supabaseUrl: string, supabaseAnonKey: string) {
 			if (entry.note) fd.set('note', entry.note)
 			if (blob) fd.set('photo', blob, 'solution.webp')
 
-			const res = await fetch(`/item/${entry.token}?/resolve`, {
-				method: 'POST',
-				body: fd
-			})
-
+			const res = await fetch(`/item/${entry.token}?/resolve`, { method: 'POST', body: fd })
 			if (res.ok || res.status === 303) {
-				await removeEntry(entry)
+				await db.delete('resolve_queue', entry.id)
+				if (entry.photoCacheKey) {
+					const cache = await caches.open(CACHE_NAME)
+					await cache.delete(entry.photoCacheKey)
+				}
 				synced++
 			} else {
-				await bumpAttempts(entry.id)
+				await db.put('resolve_queue', { ...entry, syncAttempts: entry.syncAttempts + 1 })
 				failed++
 			}
 		} catch {
-			await bumpAttempts(entry.id)
+			await db.put('resolve_queue', { ...entry, syncAttempts: entry.syncAttempts + 1 })
+			failed++
+		}
+	}
+
+	// sync close queue
+	const closes = await db.getAll('close_queue')
+	for (const entry of closes) {
+		try {
+			const fd = new FormData()
+			if (entry.note) fd.set('note', entry.note)
+
+			const res = await fetch(`/item/${entry.token}?/close`, { method: 'POST', body: fd })
+			if (res.ok || res.status === 303) {
+				await db.delete('close_queue', entry.id)
+				synced++
+			} else {
+				await db.put('close_queue', { ...entry, syncAttempts: entry.syncAttempts + 1 })
+				failed++
+			}
+		} catch {
+			await db.put('close_queue', { ...entry, syncAttempts: entry.syncAttempts + 1 })
+			failed++
+		}
+	}
+
+	// sync reopen queue
+	const reopens = await db.getAll('reopen_queue')
+	for (const entry of reopens) {
+		try {
+			const fd = new FormData()
+			fd.set('note', entry.note)
+
+			const res = await fetch(`/item/${entry.token}?/reopen`, { method: 'POST', body: fd })
+			if (res.ok || res.status === 303) {
+				await db.delete('reopen_queue', entry.id)
+				synced++
+			} else {
+				await db.put('reopen_queue', { ...entry, syncAttempts: entry.syncAttempts + 1 })
+				failed++
+			}
+		} catch {
+			await db.put('reopen_queue', { ...entry, syncAttempts: entry.syncAttempts + 1 })
 			failed++
 		}
 	}
@@ -120,19 +197,4 @@ async function resolveBlob(entry: QueuedResolve): Promise<Blob | null> {
 		return res ? res.blob() : null
 	}
 	return null
-}
-
-async function removeEntry(entry: QueuedResolve) {
-	const db = await getDB()
-	await db.delete('resolve_queue', entry.id)
-	if (entry.photoCacheKey) {
-		const cache = await caches.open(CACHE_NAME)
-		await cache.delete(entry.photoCacheKey)
-	}
-}
-
-async function bumpAttempts(id: string) {
-	const db = await getDB()
-	const entry = await db.get('resolve_queue', id)
-	if (entry) await db.put('resolve_queue', { ...entry, syncAttempts: entry.syncAttempts + 1 })
 }

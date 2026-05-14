@@ -63,85 +63,93 @@ export const actions: Actions = {
 	},
 
 	close: async ({ request, params, locals: { safeGetSession } }) => {
-		const { user } = await safeGetSession()
-		if (!user) return fail(401, { action: 'close', error: 'Not logged in.' })
+		try {
+			const { user } = await safeGetSession()
+			if (!user) return fail(401, { action: 'close', error: 'Not logged in.' })
 
-		const data = await request.formData()
-		const note = (data.get('note') as string)?.trim() || null
+			const data = await request.formData()
+			const note = (data.get('note') as string)?.trim() || null
 
-		const { data: item } = await supabaseAdmin
-			.from('punch_items')
-			.select('id, project_id')
-			.eq('share_token', params.token)
-			.single()
+			const { data: item } = await supabaseAdmin
+				.from('punch_items')
+				.select('id, project_id')
+				.eq('share_token', params.token)
+				.single()
 
-		if (!item) return fail(404, { action: 'close', error: 'Item not found.' })
+			if (!item) return fail(404, { action: 'close', error: 'Item not found.' })
 
-		const { data: membership } = await supabaseAdmin
-			.from('project_users')
-			.select('role')
-			.eq('project_id', item.project_id!)
-			.eq('user_id', user.id)
-			.single()
+			const { data: membership } = await supabaseAdmin
+				.from('project_users')
+				.select('role')
+				.eq('project_id', item.project_id!)
+				.eq('user_id', user.id)
+				.single()
 
-		if (!membership || membership.role !== 'owner') {
-			return fail(403, { action: 'close', error: 'You do not have permission to close this item.' })
+			if (!membership || membership.role !== 'owner') {
+				return fail(403, { action: 'close', error: 'You do not have permission to close this item.' })
+			}
+
+			await Promise.all([
+				supabaseAdmin.from('punch_items').update({ status: 'reviewed' }).eq('id', item.id),
+				...(note
+					? [supabaseAdmin.from('comments').insert({
+							punch_item_id: item.id,
+							body: note,
+							author_name: user.email ?? 'foreman',
+							author_user_id: user.id
+						})]
+					: [])
+			])
+
+			return { closeSuccess: true }
+		} catch {
+			return fail(500, { action: 'close', error: 'Something went wrong. Please try again.' })
 		}
-
-		await Promise.all([
-			supabaseAdmin.from('punch_items').update({ status: 'reviewed' }).eq('id', item.id),
-			...(note
-				? [supabaseAdmin.from('comments').insert({
-						punch_item_id: item.id,
-						body: note,
-						author_name: user.email ?? 'foreman',
-						author_user_id: user.id
-					})]
-				: [])
-		])
-
-		return { closeSuccess: true }
 	},
 
 	reopen: async ({ request, params, locals: { safeGetSession } }) => {
-		const { user } = await safeGetSession()
-		if (!user) return fail(401, { action: 'reopen', error: 'Not logged in.' })
+		try {
+			const { user } = await safeGetSession()
+			if (!user) return fail(401, { action: 'reopen', error: 'Not logged in.' })
 
-		const data = await request.formData()
-		const note = (data.get('note') as string)?.trim()
+			const data = await request.formData()
+			const note = (data.get('note') as string)?.trim()
 
-		if (!note) return fail(400, { action: 'reopen', error: 'Please provide a reason for returning the item.' })
+			if (!note) return fail(400, { action: 'reopen', error: 'Please provide a reason for returning the item.' })
 
-		const { data: item } = await supabaseAdmin
-			.from('punch_items')
-			.select('id, project_id')
-			.eq('share_token', params.token)
-			.single()
+			const { data: item } = await supabaseAdmin
+				.from('punch_items')
+				.select('id, project_id')
+				.eq('share_token', params.token)
+				.single()
 
-		if (!item) return fail(404, { action: 'reopen', error: 'Item not found.' })
+			if (!item) return fail(404, { action: 'reopen', error: 'Item not found.' })
 
-		const { data: membership } = await supabaseAdmin
-			.from('project_users')
-			.select('role')
-			.eq('project_id', item.project_id!)
-			.eq('user_id', user.id)
-			.single()
+			const { data: membership } = await supabaseAdmin
+				.from('project_users')
+				.select('role')
+				.eq('project_id', item.project_id!)
+				.eq('user_id', user.id)
+				.single()
 
-		if (!membership || membership.role !== 'owner') {
-			return fail(403, { action: 'reopen', error: 'You do not have permission to return this item.' })
+			if (!membership || membership.role !== 'owner') {
+				return fail(403, { action: 'reopen', error: 'You do not have permission to return this item.' })
+			}
+
+			await Promise.all([
+				supabaseAdmin.from('punch_items').update({ status: 'reopened' }).eq('id', item.id),
+				supabaseAdmin.from('comments').insert({
+					punch_item_id: item.id,
+					body: note,
+					author_name: user.email ?? 'foreman',
+					author_user_id: user.id
+				})
+			])
+
+			return { reopenSuccess: true }
+		} catch {
+			return fail(500, { action: 'reopen', error: 'Something went wrong. Please try again.' })
 		}
-
-		await Promise.all([
-			supabaseAdmin.from('punch_items').update({ status: 'reopened' }).eq('id', item.id),
-			supabaseAdmin.from('comments').insert({
-				punch_item_id: item.id,
-				body: note,
-				author_name: user.email ?? 'foreman',
-				author_user_id: user.id
-			})
-		])
-
-		return { reopenSuccess: true }
 	},
 
 	update_item: async ({ request, params, locals: { safeGetSession } }) => {
