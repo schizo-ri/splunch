@@ -4,6 +4,11 @@
 
 	let { form }: { form: ActionData } = $props();
 	let loading = $state(false);
+	let mode = $state<'login' | 'forgot'>('login');
+
+	$effect(() => {
+		if (form?.forgotSent) mode = 'forgot';
+	});
 </script>
 
 <svelte:head>
@@ -26,56 +31,124 @@
 		</header>
 
 		<main>
-			<form
-				method="POST"
-				use:enhance={() => {
-					loading = true;
-					return async ({ update }) => {
-						await update();
-						loading = false;
-					};
-				}}
-			>
-				{#if form?.error}
-					<div class="error-banner" role="alert">
-						{form.error}
-					</div>
-				{/if}
-
-				<div class="field">
-					<label class="label" for="email">Email</label>
-					<input
-						class="input"
-						type="email"
-						id="email"
-						name="email"
-						autocomplete="email"
-						autocapitalize="none"
-						required
-						disabled={loading}
-					/>
-				</div>
-
-				<div class="field">
-					<label class="label" for="password">Password</label>
-					<input
-						class="input"
-						type="password"
-						id="password"
-						name="password"
-						autocomplete="current-password"
-						required
-						disabled={loading}
-					/>
-				</div>
-
-				<button class="btn btn-primary btn-full submit" type="submit" disabled={loading}>
-					{#if loading}
-						<span class="spinner"></span>
+			{#if mode === 'login'}
+				<form
+					method="POST"
+					action="?/login"
+					use:enhance={() => {
+						loading = true;
+						return async ({ update }) => {
+							await update();
+							loading = false;
+						};
+					}}
+				>
+					{#if form?.error}
+						<div class="error-banner" role="alert">
+							{form.error}
+						</div>
 					{/if}
-					Sign in
-				</button>
-			</form>
+
+					<div class="field">
+						<label class="label" for="email">Email</label>
+						<input
+							class="input"
+							type="email"
+							id="email"
+							name="email"
+							autocomplete="email"
+							autocapitalize="none"
+							required
+							disabled={loading}
+						/>
+					</div>
+
+					<div class="field">
+						<label class="label" for="password">Password</label>
+						<input
+							class="input"
+							type="password"
+							id="password"
+							name="password"
+							autocomplete="current-password"
+							required
+							disabled={loading}
+						/>
+					</div>
+
+					<button class="btn btn-primary btn-full submit" type="submit" disabled={loading}>
+						{#if loading}
+							<span class="spinner"></span>
+						{/if}
+						Sign in
+					</button>
+
+					<button
+						type="button"
+						class="forgot-link"
+						onclick={() => (mode = 'forgot')}
+					>
+						Forgot password?
+					</button>
+				</form>
+			{:else}
+				<form
+					method="POST"
+					action="?/forgot_password"
+					use:enhance={() => {
+						loading = true;
+						return async ({ update }) => {
+							await update();
+							loading = false;
+						};
+					}}
+				>
+					{#if form?.forgotSent}
+						<div class="success-banner" role="status">
+							Check your email for a reset link.
+						</div>
+					{/if}
+
+					{#if form?.forgotError}
+						<div class="error-banner" role="alert">
+							{form.forgotError}
+						</div>
+					{/if}
+
+					{#if !form?.forgotSent}
+						<p class="forgot-hint">Enter your email and we'll send you a reset link.</p>
+
+						<div class="field">
+							<label class="label" for="forgot-email">Email</label>
+							<input
+								class="input"
+								type="email"
+								id="forgot-email"
+								name="email"
+								autocomplete="email"
+								autocapitalize="none"
+								required
+								disabled={loading}
+							/>
+						</div>
+
+						<button class="btn btn-primary btn-full" type="submit" disabled={loading}>
+							{#if loading}
+								<span class="spinner"></span>
+							{/if}
+							Send reset link
+						</button>
+					{/if}
+
+					<button
+						type="button"
+						class="forgot-link"
+						onclick={() => { mode = 'login'; }}
+					>
+						Back to sign in
+					</button>
+				</form>
+			{/if}
 
 			<p class="register-note">
 				Foreman accounts are created by the administrator.<br />
@@ -143,6 +216,37 @@
 		padding: var(--space-3) var(--space-4);
 		font-size: var(--text-sm);
 		font-weight: var(--weight-medium);
+	}
+
+	.success-banner {
+		background-color: var(--color-resolved-bg);
+		color: var(--color-resolved-fg);
+		border: 1px solid var(--color-resolved);
+		border-radius: var(--radius-md);
+		padding: var(--space-3) var(--space-4);
+		font-size: var(--text-sm);
+		font-weight: var(--weight-medium);
+	}
+
+	.forgot-hint {
+		font-size: var(--text-sm);
+		color: var(--color-text-secondary);
+		margin: 0;
+	}
+
+	.forgot-link {
+		background: none;
+		border: none;
+		padding: 0;
+		font-size: var(--text-sm);
+		color: var(--color-brand-dark);
+		cursor: pointer;
+		text-align: center;
+		font-weight: var(--weight-medium);
+	}
+
+	.forgot-link:hover {
+		text-decoration: underline;
 	}
 
 	.submit {

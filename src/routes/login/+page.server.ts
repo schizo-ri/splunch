@@ -7,7 +7,7 @@ export const load: PageServerLoad = async ({ locals: { safeGetSession } }) => {
 }
 
 export const actions: Actions = {
-	default: async ({ request, locals: { supabase } }) => {
+	login: async ({ request, locals: { supabase } }) => {
 		const data = await request.formData()
 		const email = (data.get('email') as string)?.trim()
 		const password = data.get('password') as string
@@ -23,5 +23,20 @@ export const actions: Actions = {
 		}
 
 		redirect(303, '/dashboard')
+	},
+
+	forgot_password: async ({ request, locals: { supabase }, url }) => {
+		const data = await request.formData()
+		const email = (data.get('email') as string)?.trim()
+
+		if (!email) {
+			return fail(400, { forgotError: 'Enter your email address.' })
+		}
+
+		await supabase.auth.resetPasswordForEmail(email, {
+			redirectTo: `${url.origin}/auth/reset`
+		})
+
+		return { forgotSent: true }
 	}
 }
