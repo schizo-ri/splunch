@@ -38,12 +38,35 @@
 	let offlineQueued = $state(false);
 	let closeQueued = $state(false);
 	let reopenQueued = $state(false);
+	let comments = $state(data.comments);
+
+	$effect(() => {
+		comments = data.comments;
+	});
 
 	onMount(() => {
 		workerName = localStorage.getItem('splunch_worker_name') ?? '';
 		getPendingCount().then((n) => (pendingCount = n));
 		window.addEventListener('online', handleSync);
-		return () => window.removeEventListener('online', handleSync);
+
+		const channel = data.supabase
+			.channel(`comments-${item.id}`)
+			.on(
+				'postgres_changes',
+				{ event: 'INSERT', schema: 'public', table: 'comments', filter: `punch_item_id=eq.${item.id}` },
+				(payload) => {
+					const c = payload.new as (typeof comments)[0];
+					if (!comments.find((x) => x.id === c.id)) {
+						comments = [...comments, c];
+					}
+				}
+			)
+			.subscribe((status, err) => console.log('[Realtime comments]', status, err));
+
+		return () => {
+			window.removeEventListener('online', handleSync);
+			data.supabase.removeChannel(channel);
+		};
 	});
 
 	function saveWorkerName() {
@@ -552,11 +575,11 @@
 			{/if}
 
 			<!-- Comments -->
-			{#if data.comments.length > 0}
+			{#if comments.length > 0}
 				<div class="comments-block">
 					<h2 class="section-label">Activity</h2>
 					<ul class="comment-list">
-						{#each data.comments as comment (comment.id)}
+						{#each comments as comment (comment.id)}
 							<li class="comment">
 								<span class="comment-author font-medium">{comment.author_name}</span>
 								<span class="comment-body text-secondary">{comment.body}</span>

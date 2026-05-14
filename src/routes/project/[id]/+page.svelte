@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { STATUS_LABEL, STATUS_BADGE_CLASS } from '$lib/status';
@@ -8,6 +9,12 @@
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	let items = $state(data.items);
+
+	$effect(() => {
+		items = data.items;
+	});
 
 	let showForm = $state(false);
 	let showAreaForm = $state(false);
@@ -26,18 +33,18 @@
 
 	const counts = $derived(() => {
 		const map: Partial<Record<PunchStatus, number>> = {};
-		for (const item of data.items) {
-			const s = item.status as PunchStatus;
+		for (const i of items) {
+			const s = i.status as PunchStatus;
 			map[s] = (map[s] ?? 0) + 1;
 		}
 		return map;
 	});
 
 	const filteredItems = $derived(() => {
-		let items = data.items;
-		if (activeStatus !== 'all') items = items.filter((i) => i.status === activeStatus);
-		if (activeArea !== 'all') items = items.filter((i) => i.area_id === activeArea);
-		return items;
+		let list = items;
+		if (activeStatus !== 'all') list = list.filter((i) => i.status === activeStatus);
+		if (activeArea !== 'all') list = list.filter((i) => i.area_id === activeArea);
+		return list;
 	});
 
 	const areaMap = $derived(() => new Map(data.areas.map((a) => [a.id, a.name])));
@@ -51,6 +58,24 @@
 		if (form?.areaSuccess) {
 			showAreaForm = false;
 		}
+	});
+
+	onMount(() => {
+		const channel = data.supabase
+			.channel(`project-items-${data.project.id}`)
+			.on(
+				'postgres_changes',
+				{ event: 'UPDATE', schema: 'public', table: 'punch_items', filter: `project_id=eq.${data.project.id}` },
+				(payload) => {
+					const updated = payload.new as (typeof items)[0];
+					items = items.map((i) => (i.id === updated.id ? { ...i, ...updated } : i));
+				}
+			)
+			.subscribe();
+
+		return () => {
+			data.supabase.removeChannel(channel);
+		};
 	});
 
 	function openIssueForm() {
