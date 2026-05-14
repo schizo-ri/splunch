@@ -14,7 +14,7 @@ export const actions: Actions = {
 
 			const { data: item } = await supabaseAdmin
 				.from('punch_items')
-				.select('id, status')
+				.select('id, status, title, project_id, share_token')
 				.eq('share_token', params.token)
 				.single()
 
@@ -59,6 +59,25 @@ export const actions: Actions = {
 			}
 
 			await Promise.all(inserts)
+
+			if (item.project_id) {
+				const { data: projectUsers } = await supabaseAdmin
+					.from('project_users')
+					.select('user_id')
+					.eq('project_id', item.project_id)
+
+				if (projectUsers && projectUsers.length > 0) {
+					await supabaseAdmin.from('notifications').insert(
+						projectUsers.map((pu) => ({
+							user_id: pu.user_id,
+							project_id: item.project_id!,
+							punch_item_id: item.id,
+							item_token: item.share_token,
+							message: `"${item.title}" resolved by ${workerName}`
+						}))
+					)
+				}
+			}
 
 			return { resolveSuccess: true }
 		} catch {
@@ -123,7 +142,7 @@ export const actions: Actions = {
 
 			const { data: item } = await supabaseAdmin
 				.from('punch_items')
-				.select('id, project_id')
+				.select('id, project_id, title, share_token')
 				.eq('share_token', params.token)
 				.single()
 
@@ -149,6 +168,26 @@ export const actions: Actions = {
 					author_user_id: user.id
 				})
 			])
+
+			if (item.project_id) {
+				const { data: projectUsers } = await supabaseAdmin
+					.from('project_users')
+					.select('user_id')
+					.eq('project_id', item.project_id)
+					.neq('user_id', user.id)
+
+				if (projectUsers && projectUsers.length > 0) {
+					await supabaseAdmin.from('notifications').insert(
+						projectUsers.map((pu) => ({
+							user_id: pu.user_id,
+							project_id: item.project_id!,
+							punch_item_id: item.id,
+							item_token: item.share_token,
+							message: `"${item.title}" returned for repair`
+						}))
+					)
+				}
+			}
 
 			return { reopenSuccess: true }
 		} catch {

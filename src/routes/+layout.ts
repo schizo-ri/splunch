@@ -28,11 +28,11 @@ export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 	// Fall back to session.user so cached pages remain functional without network.
 	let user = session?.user ?? null
 	try {
-		const { data } = await supabase.auth.getUser()
-		user = data.user ?? user
+		const { data: userData } = await supabase.auth.getUser()
+		user = userData.user ?? user
 	} catch {
 		// offline or auth service unreachable — keep session user
 	}
 
-	return { session, user, supabase }
+	return { session, user, supabase, notifications: data.notifications ?? [] }
 }

@@ -12,6 +12,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          project_id: string | null
+          punch_item_id: string | null
+          item_token: string | null
+          message: string
+          read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          project_id?: string | null
+          punch_item_id?: string | null
+          item_token?: string | null
+          message: string
+          read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          project_id?: string | null
+          punch_item_id?: string | null
+          item_token?: string | null
+          message?: string
+          read?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
       area_templates: {
         Row: {
           id: string
@@ -311,6 +344,7 @@ export type Area        = Tables<'areas'>
 export type AreaTemplate = Tables<'area_templates'>
 export type Profile     = Tables<'profiles'>
 export type ProjectUser = Tables<'project_users'>
+export type Notification = Tables<'notifications'>
 
 export type ProjectRole = 'owner' | 'member'
 export type PunchStatus = 'open' | 'resolved' | 'reviewed' | 'closed' | 'reopened'
