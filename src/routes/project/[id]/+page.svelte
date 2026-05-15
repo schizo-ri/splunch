@@ -344,16 +344,31 @@
 						onchange={onPhotoChange}
 						class="file-input-hidden"
 					/>
+					<input
+						type="file"
+						id="photo-camera"
+						accept="image/*"
+						capture="environment"
+						disabled={creating}
+						onchange={onPhotoChange}
+						class="file-input-hidden"
+					/>
 
 					{#if photoPreview}
 						<AnnotationCanvas src={photoPreview} onchange={(a) => (annotations = a)} />
 						<input type="hidden" name="annotations" value={JSON.stringify(annotations)} />
 						<button type="button" class="photo-clear-text" onclick={clearPhoto}>Remove photo</button>
 					{:else}
-						<label class="photo-picker" for="photo">
-							<span class="photo-picker-icon" aria-hidden="true">📷</span>
-							<span>Take a photo or choose an image</span>
-						</label>
+						<div class="photo-picker-row">
+							<label class="photo-picker" for="photo-camera">
+								<span class="photo-picker-icon" aria-hidden="true">📷</span>
+								<span>Camera</span>
+							</label>
+							<label class="photo-picker" for="photo">
+								<span class="photo-picker-icon" aria-hidden="true">🖼️</span>
+								<span>Gallery</span>
+							</label>
+						</div>
 					{/if}
 				</div>
 
@@ -650,7 +665,13 @@
 	}
 
 	/* Photo picker */
+	.photo-picker-row {
+		display: flex;
+		gap: var(--space-3);
+	}
+
 	.photo-picker {
+		flex: 1;
 		display: flex;
 		flex-direction: column;
 		align-items: center;

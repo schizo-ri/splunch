@@ -393,6 +393,15 @@
 										onchange={onResolvePhoto}
 										class="file-input-hidden"
 									/>
+									<input
+										type="file"
+										id="resolve-photo-camera"
+										accept="image/*"
+										capture="environment"
+										disabled={resolving}
+										onchange={onResolvePhoto}
+										class="file-input-hidden"
+									/>
 									{#if resolvePhoto}
 										<div class="photo-preview-wrap">
 											<img class="photo-preview" src={resolvePhoto} alt="Preview" />
@@ -404,10 +413,16 @@
 											>
 										</div>
 									{:else}
-										<label class="photo-picker" for="resolve-photo">
-											<span class="photo-picker-icon" aria-hidden="true">📷</span>
-											<span>Take a photo or choose an image</span>
-										</label>
+										<div class="photo-picker-row">
+											<label class="photo-picker" for="resolve-photo-camera">
+												<span class="photo-picker-icon" aria-hidden="true">📷</span>
+												<span>Camera</span>
+											</label>
+											<label class="photo-picker" for="resolve-photo">
+												<span class="photo-picker-icon" aria-hidden="true">🖼️</span>
+												<span>Gallery</span>
+											</label>
+										</div>
 									{/if}
 								</div>
 							</div>
@@ -829,7 +844,13 @@
 		pointer-events: none;
 	}
 
+	.photo-picker-row {
+		display: flex;
+		gap: var(--space-3);
+	}
+
 	.photo-picker {
+		flex: 1;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
