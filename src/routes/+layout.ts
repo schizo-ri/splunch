@@ -34,5 +34,16 @@ export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 		// offline or auth service unreachable — keep session user
 	}
 
-	return { session, user, supabase, notifications: data.notifications ?? [] }
+	let notifications: import('$lib/types/notifications').NotifItem[] = []
+	if (isBrowser() && user) {
+		const { data: notifData } = await supabase
+			.from('notifications')
+			.select('id, message, read, created_at, item_token')
+			.eq('user_id', user.id)
+			.order('created_at', { ascending: false })
+			.limit(30)
+		notifications = notifData ?? []
+	}
+
+	return { session, user, supabase, notifications }
 }

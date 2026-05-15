@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, setContext } from 'svelte';
 	import { invalidate } from '$app/navigation';
+	import { navigating } from '$app/stores';
 	import favicon from '$lib/assets/favicon.svg';
 	import '../app.css';
 	import { syncQueue } from '$lib/offline-queue';
@@ -84,6 +85,10 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
+{#if $navigating}
+	<div class="nav-progress" role="status" aria-label="Loading"></div>
+{/if}
+
 {#if !isOnline}
 	<div class="offline-bar" role="status" aria-live="polite">Offline — showing cached data</div>
 {/if}
@@ -91,6 +96,24 @@
 {@render children()}
 
 <style>
+	.nav-progress {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		z-index: 200;
+		height: 3px;
+		background: linear-gradient(90deg, var(--color-brand) 0%, var(--color-brand-dark) 100%);
+		animation: progress-slide 1.2s ease-in-out infinite;
+		transform-origin: left;
+	}
+
+	@keyframes progress-slide {
+		0%   { transform: scaleX(0); opacity: 1; }
+		60%  { transform: scaleX(0.85); opacity: 1; }
+		100% { transform: scaleX(1); opacity: 0; }
+	}
+
 	.offline-bar {
 		position: fixed;
 		bottom: 0;

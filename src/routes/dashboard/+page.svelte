@@ -20,22 +20,21 @@
 <div class="layout">
 	<Topbar logo>
 		{#snippet right()}
-			{#if data.isSuperadmin}
-				<a class="btn btn-ghost btn-sm" href="/admin">Admin</a>
-			{/if}
 			<form method="POST" action="/logout">
 				<button class="btn btn-ghost btn-sm" type="submit">Log out</button>
 			</form>
+			{#if data.isSuperadmin}
+				<a class="btn btn-ghost btn-sm" href="/admin"
+					><img src="/images/icons/settings.svg" alt="" width="20" height="20" /></a
+				>
+			{/if}
 		{/snippet}
 	</Topbar>
 
 	<main class="main container">
 		<div class="section-header">
 			<h1 class="section-title">Projects</h1>
-			<button
-				class="btn btn-primary btn-sm"
-				onclick={() => (showNewProject = !showNewProject)}
-			>
+			<button class="btn btn-primary btn-sm" onclick={() => (showNewProject = !showNewProject)}>
 				{showNewProject ? 'Cancel' : '+ New project'}
 			</button>
 		</div>
